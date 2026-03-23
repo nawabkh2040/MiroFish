@@ -16,10 +16,9 @@ from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
-from openai import OpenAI
-
 from ..config import Config
 from ..utils.logger import get_logger
+from ..utils.llm_client import LLMClient
 from .zep_entity_reader import EntityNode, ZepEntityReader
 
 logger = get_logger('mirofish.simulation_config')
@@ -223,21 +222,21 @@ class SimulationConfigGenerator:
     
     def __init__(
         self,
+        llm_client: Optional[LLMClient] = None,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
         model_name: Optional[str] = None
     ):
-        self.api_key = api_key or Config.LLM_API_KEY
-        self.base_url = base_url or Config.LLM_BASE_URL
-        self.model_name = model_name or Config.LLM_MODEL_NAME
-        
-        if not self.api_key:
-            raise ValueError("LLM_API_KEY 未配置")
-        
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
+        # Use provided LLMClient or create a new one
+        self.llm_client = llm_client or LLMClient(
+            api_key=api_key,
+            base_url=base_url,
+            model=model_name
         )
+        
+        # Store model name and base_url for logging
+        self.model_name = self.llm_client.model
+        self.base_url = base_url or getattr(self.llm_client, 'base_url', None)
     
     def generate_config(
         self,
@@ -291,18 +290,34 @@ class SimulationConfigGenerator:
         
         reasoning_parts = []
         
-        # ========== 步骤1: 生成时间配置 ==========
-        report_progress(1, "生成时间配置...")
+        # ========== Step 1: Generate time configuration ==========
+        report_progress(1, "Generating time configuration...")
         num_entities = len(entities)
         time_config_result = self._generate_time_config(context, num_entities)
-        time_config = self._parse_time_config(time_config_result, num_entities)
-        reasoning_parts.append(f"时间配置: {time_config_result.get('reasoning', '成功')}")
         
-        # ========== 步骤2: 生成事件配置 ==========
-        report_progress(2, "生成事件配置和热点话题...")
+        # Ensure time_config_result is a dict
+        if isinstance(time_config_result, list):
+            time_config_result = time_config_result[0] if time_config_result else {}
+        if not isinstance(time_config_result, dict):
+            logger.warning(f"Time config result is invalid type: {type(time_config_result)}, using default")
+            time_config_result = self._get_default_time_config(num_entities)
+        
+        time_config = self._parse_time_config(time_config_result, num_entities)
+        reasoning_parts.append(f"Time configuration: {time_config_result.get('reasoning', 'Success')}")
+        
+        # ========== Step 2: Generate event configuration ==========
+        report_progress(2, "Generating event configuration and hot topics...")
         event_config_result = self._generate_event_config(context, simulation_requirement, entities)
+        
+        # Ensure event_config_result is a dict
+        if isinstance(event_config_result, list):
+            event_config_result = event_config_result[0] if event_config_result else {}
+        if not isinstance(event_config_result, dict):
+            logger.warning(f"Event config result is invalid type: {type(event_config_result)}, using default")
+            event_config_result = {"initial_posts": [], "hot_topics": [], "narrative_direction": ""}
+        
         event_config = self._parse_event_config(event_config_result)
-        reasoning_parts.append(f"事件配置: {event_config_result.get('reasoning', '成功')}")
+        reasoning_parts.append(f"Event configuration: {event_config_result.get('reasoning', 'Success')}")
         
         # ========== 步骤3-N: 分批生成Agent配置 ==========
         all_agent_configs = []
@@ -431,40 +446,46 @@ class SimulationConfigGenerator:
         return "\n".join(lines)
     
     def _call_llm_with_retry(self, prompt: str, system_prompt: str) -> Dict[str, Any]:
-        """带重试的LLM调用，包含JSON修复逻辑"""
+        """Call LLM with retry logic and JSON repair"""
         import re
+        import time
         
         max_attempts = 3
         last_error = None
         
         for attempt in range(max_attempts):
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model_name,
+                # Call LLM using the abstracted client (supports both OpenAI and Gemini)
+                content = self.llm_client.chat(
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.7 - (attempt * 0.1)  # 每次重试降低温度
-                    # 不设置max_tokens，让LLM自由发挥
+                    temperature=0.7 - (attempt * 0.1)  # Lower temperature on retry
                 )
                 
-                content = response.choices[0].message.content
-                finish_reason = response.choices[0].finish_reason
-                
-                # 检查是否被截断
-                if finish_reason == 'length':
-                    logger.warning(f"LLM输出被截断 (attempt {attempt+1})")
-                    content = self._fix_truncated_json(content)
-                
-                # 尝试解析JSON
+                # Try to parse JSON
                 try:
-                    return json.loads(content)
-                except json.JSONDecodeError as e:
-                    logger.warning(f"JSON解析失败 (attempt {attempt+1}): {str(e)[:80]}")
+                    parsed = json.loads(content)
                     
-                    # 尝试修复JSON
+                    # If LLM returned a list (e.g., array of configs), extract first element
+                    if isinstance(parsed, list):
+                        if parsed:
+                            parsed = parsed[0]  # Use first element
+                        else:
+                            raise ValueError("LLM returned empty array")
+                    
+                    # Ensure we have a dict
+                    if not isinstance(parsed, dict):
+                        raise ValueError(f"Expected dict, got {type(parsed).__name__}")
+                    
+                    return parsed
+                    
+                except json.JSONDecodeError as e:
+                    logger.warning(f"JSON parse failed (attempt {attempt+1}): {str(e)[:80]}")
+                    
+                    # Try to fix JSON structure
                     fixed = self._try_fix_config_json(content)
                     if fixed:
                         return fixed
@@ -472,12 +493,11 @@ class SimulationConfigGenerator:
                     last_error = e
                     
             except Exception as e:
-                logger.warning(f"LLM调用失败 (attempt {attempt+1}): {str(e)[:80]}")
+                logger.warning(f"LLM call failed (attempt {attempt+1}): {str(e)[:80]}")
                 last_error = e
-                import time
                 time.sleep(2 * (attempt + 1))
         
-        raise last_error or Exception("LLM调用失败")
+        raise last_error or Exception("LLM call failed")
     
     def _fix_truncated_json(self, content: str) -> str:
         """修复被截断的JSON"""
@@ -498,18 +518,18 @@ class SimulationConfigGenerator:
         return content
     
     def _try_fix_config_json(self, content: str) -> Optional[Dict[str, Any]]:
-        """尝试修复配置JSON"""
+        """Try to fix configuration JSON"""
         import re
         
-        # 修复被截断的情况
+        # Fix truncated JSON
         content = self._fix_truncated_json(content)
         
-        # 提取JSON部分
+        # Extract JSON part (first dict found)
         json_match = re.search(r'\{[\s\S]*\}', content)
         if json_match:
             json_str = json_match.group()
             
-            # 移除字符串中的换行符
+            # Remove newlines in strings
             def fix_string(match):
                 s = match.group(0)
                 s = s.replace('\n', ' ').replace('\r', ' ')
@@ -519,13 +539,20 @@ class SimulationConfigGenerator:
             json_str = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', fix_string, json_str)
             
             try:
-                return json.loads(json_str)
+                parsed = json.loads(json_str)
+                # If it's a list, extract first element
+                if isinstance(parsed, list) and parsed:
+                    return parsed[0] if isinstance(parsed[0], dict) else None
+                return parsed if isinstance(parsed, dict) else None
             except:
-                # 尝试移除所有控制字符
+                # Try removing all control characters
                 json_str = re.sub(r'[\x00-\x1f\x7f-\x9f]', ' ', json_str)
                 json_str = re.sub(r'\s+', ' ', json_str)
                 try:
-                    return json.loads(json_str)
+                    parsed = json.loads(json_str)
+                    if isinstance(parsed, list) and parsed:
+                        return parsed[0] if isinstance(parsed[0], dict) else None
+                    return parsed if isinstance(parsed, dict) else None
                 except:
                     pass
         
@@ -607,8 +634,14 @@ class SimulationConfigGenerator:
         }
     
     def _parse_time_config(self, result: Dict[str, Any], num_entities: int) -> TimeSimulationConfig:
-        """解析时间配置结果，并验证agents_per_hour值不超过总agent数"""
-        # 获取原始值
+        """Parse time configuration result and validate agents_per_hour values don't exceed total agents"""
+        
+        # Ensure result is a dict
+        if not isinstance(result, dict):
+            logger.warning(f"Time config is not a dict: {type(result).__name__}, using defaults")
+            return TimeSimulationConfig()
+        
+        # Get raw values
         agents_per_hour_min = result.get("agents_per_hour_min", max(1, num_entities // 15))
         agents_per_hour_max = result.get("agents_per_hour_max", max(5, num_entities // 5))
         
@@ -714,7 +747,13 @@ class SimulationConfigGenerator:
             }
     
     def _parse_event_config(self, result: Dict[str, Any]) -> EventConfig:
-        """解析事件配置结果"""
+        """Parse event configuration result"""
+        
+        # Ensure result is a dict
+        if not isinstance(result, dict):
+            logger.warning(f"Event config is not a dict: {type(result).__name__}, using defaults")
+            return EventConfig()
+        
         return EventConfig(
             initial_posts=result.get("initial_posts", []),
             scheduled_events=[],

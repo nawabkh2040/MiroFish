@@ -358,21 +358,21 @@ def _check_simulation_prepared(simulation_id: str) -> tuple:
 @simulation_bp.route('/prepare', methods=['POST'])
 def prepare_simulation():
     """
-    准备模拟环境（异步任务，LLM智能生成所有参数）
+    Prepare simulation environment (async task, LLM-driven parameter generation)
     
-    这是一个耗时操作，接口会立即返回task_id，
-    使用 GET /api/simulation/prepare/status 查询进度
+    This is a time-consuming operation. The endpoint returns task_id immediately.
+    Use POST /api/simulation/prepare/status to query progress
     
-    特性：
-    - 自动检测已完成的准备工作，避免重复生成
-    - 如果已准备完成，直接返回已有结果
-    - 支持强制重新生成（force_regenerate=true）
+    Features:
+    - Auto-detects completed preparations to avoid re-generation
+    - Returns existing results if already prepared
+    - Supports manual re-generation (force_regenerate=true)
     
-    步骤：
-    1. 检查是否已有完成的准备工作
-    2. 从Zep图谱读取并过滤实体
-    3. 为每个实体生成OASIS Agent Profile（带重试机制）
-    4. LLM智能生成模拟配置（带重试机制）
+    Steps:
+    1. Check for existing completed preparation work
+    2. Read and filter entities from Zep graph
+    3. Generate OASIS Agent Profile for each entity (with retry)
+    4. LLM intelligent generation of simulation config (with retry)
     5. 保存配置文件和预设脚本
     
     请求（JSON）：
@@ -634,22 +634,22 @@ def prepare_simulation():
         }), 500
 
 
-@simulation_bp.route('/prepare/status', methods=['POST'])
+@simulation_bp.route('/prepare/status', methods=['POST', 'GET'])
 def get_prepare_status():
     """
-    查询准备任务进度
+    Query simulation preparation task progress
     
-    支持两种查询方式：
-    1. 通过task_id查询正在进行的任务进度
-    2. 通过simulation_id检查是否已有完成的准备工作
+    Supports two query methods:
+    1. Query ongoing task progress via task_id
+    2. Check if preparation is completed via simulation_id
     
-    请求（JSON）：
+    Request (JSON for POST or query params for GET):
         {
-            "task_id": "task_xxxx",          // 可选，prepare返回的task_id
-            "simulation_id": "sim_xxxx"      // 可选，模拟ID（用于检查已完成的准备）
+            "task_id": "task_xxxx",          // Optional: task_id returned by /prepare
+            "simulation_id": "sim_xxxx"      // Optional: simulation ID to check preparation status
         }
     
-    返回：
+    Response:
         {
             "success": true,
             "data": {
@@ -657,18 +657,22 @@ def get_prepare_status():
                 "status": "processing|completed|ready",
                 "progress": 45,
                 "message": "...",
-                "already_prepared": true|false,  // 是否已有完成的准备
-                "prepare_info": {...}            // 已准备完成时的详细信息
+                "already_prepared": true|false,  // Whether preparation has completed
+                "prepare_info": {...}            // Detailed info when preparation completed
             }
         }
     """
     from ..models.task import TaskManager
     
     try:
-        data = request.get_json() or {}
-        
-        task_id = data.get('task_id')
-        simulation_id = data.get('simulation_id')
+        # Support both GET (query params) and POST (JSON body)
+        if request.method == 'GET':
+            task_id = request.args.get('task_id')
+            simulation_id = request.args.get('simulation_id')
+        else:
+            data = request.get_json() or {}
+            task_id = data.get('task_id')
+            simulation_id = data.get('simulation_id')
         
         # 如果提供了simulation_id，先检查是否已准备完成
         if simulation_id:
@@ -680,7 +684,7 @@ def get_prepare_status():
                         "simulation_id": simulation_id,
                         "status": "ready",
                         "progress": 100,
-                        "message": "已有完成的准备工作",
+                        "message": "Preparation already completed",
                         "already_prepared": True,
                         "prepare_info": prepare_info
                     }
@@ -696,13 +700,13 @@ def get_prepare_status():
                         "simulation_id": simulation_id,
                         "status": "not_started",
                         "progress": 0,
-                        "message": "尚未开始准备，请调用 /api/simulation/prepare 开始",
+                        "message": "Preparation not started. Call /api/simulation/prepare to begin",
                         "already_prepared": False
                     }
                 })
             return jsonify({
                 "success": False,
-                "error": "请提供 task_id 或 simulation_id"
+                "error": "Please provide task_id or simulation_id"
             }), 400
         
         task_manager = TaskManager()
@@ -728,7 +732,7 @@ def get_prepare_status():
             
             return jsonify({
                 "success": False,
-                "error": f"任务不存在: {task_id}"
+                "error": f"Task not found: {task_id}"
             }), 404
         
         task_dict = task.to_dict()
@@ -740,7 +744,7 @@ def get_prepare_status():
         })
         
     except Exception as e:
-        logger.error(f"查询任务状态失败: {str(e)}")
+        logger.error(f"Failed to query task status: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e)
@@ -1080,17 +1084,32 @@ def get_simulation_profiles_realtime(simulation_id: str):
             file_stat = os.stat(profiles_file)
             file_modified_at = datetime.fromtimestamp(file_stat.st_mtime).isoformat()
             
-            try:
-                if platform == "reddit":
-                    with open(profiles_file, 'r', encoding='utf-8') as f:
-                        profiles = json.load(f)
-                else:
-                    with open(profiles_file, 'r', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        profiles = list(reader)
-            except (json.JSONDecodeError, Exception) as e:
-                logger.warning(f"读取 profiles 文件失败（可能正在写入中）: {e}")
-                profiles = []
+            # Read profiles with retry logic (file may be incomplete during writes)
+            profiles = []
+            max_retries = 3
+            for retry in range(max_retries):
+                try:
+                    if platform == "reddit":
+                        with open(profiles_file, 'r', encoding='utf-8') as f:
+                            profiles = json.load(f)
+                    else:
+                        with open(profiles_file, 'r', encoding='utf-8') as f:
+                            reader = csv.DictReader(f)
+                            profiles = list(reader)
+                    break  # Successfully read, exit retry loop
+                except json.JSONDecodeError as e:
+                    if retry < max_retries - 1:
+                        # File may still be writing, retry after short delay
+                        import time
+                        time.sleep(0.5)
+                        logger.debug(f"Retrying profile read (attempt {retry+1})")
+                    else:
+                        logger.warning(f"Failed to read profiles file after {max_retries} attempts: {e}")
+                        profiles = []
+                except Exception as e:
+                    logger.warning(f"Error reading profiles file: {e}")
+                    profiles = []
+                    break
         
         # 检查是否正在生成（通过 state.json 判断）
         is_generating = False

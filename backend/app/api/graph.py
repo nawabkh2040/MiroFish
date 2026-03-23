@@ -1,6 +1,7 @@
 """
-图谱相关API路由
-采用项目上下文机制，服务端持久化状态
+Graph-related API Routes
+Uses project context mechanism with server-side persistent state
+Supports both OpenAI and Gemini LLM providers for ontology generation and analysis
 """
 
 import os
@@ -18,31 +19,31 @@ from ..utils.logger import get_logger
 from ..models.task import TaskManager, TaskStatus
 from ..models.project import ProjectManager, ProjectStatus
 
-# 获取日志器
+# Get logger instance
 logger = get_logger('mirofish.api')
 
 
 def allowed_file(filename: str) -> bool:
-    """检查文件扩展名是否允许"""
+    """Check if file extension is allowed"""
     if not filename or '.' not in filename:
         return False
     ext = os.path.splitext(filename)[1].lower().lstrip('.')
     return ext in Config.ALLOWED_EXTENSIONS
 
 
-# ============== 项目管理接口 ==============
+# ============== Project Management APIs ==============
 
 @graph_bp.route('/project/<project_id>', methods=['GET'])
 def get_project(project_id: str):
     """
-    获取项目详情
+    Get project details
     """
     project = ProjectManager.get_project(project_id)
     
     if not project:
         return jsonify({
             "success": False,
-            "error": f"项目不存在: {project_id}"
+            "error": f"Project not found: {project_id}"
         }), 404
     
     return jsonify({
@@ -54,7 +55,7 @@ def get_project(project_id: str):
 @graph_bp.route('/project/list', methods=['GET'])
 def list_projects():
     """
-    列出所有项目
+    List all projects
     """
     limit = request.args.get('limit', 50, type=int)
     projects = ProjectManager.list_projects(limit=limit)
@@ -116,22 +117,25 @@ def reset_project(project_id: str):
     })
 
 
-# ============== 接口1：上传文件并生成本体 ==============
+# ============== Endpoint 1: Upload files and generate ontology ==============
 
 @graph_bp.route('/ontology/generate', methods=['POST'])
 def generate_ontology():
     """
-    接口1：上传文件，分析生成本体定义
+    Endpoint 1: Upload files and generate ontology definition
     
-    请求方式：multipart/form-data
+    Generates entity types and relationship types suitable for social media opinion simulation
+    using either OpenAI or Gemini LLM (based on LLM_PROVIDER configuration)
     
-    参数：
-        files: 上传的文件（PDF/MD/TXT），可多个
-        simulation_requirement: 模拟需求描述（必填）
-        project_name: 项目名称（可选）
-        additional_context: 额外说明（可选）
+    Request format: multipart/form-data
+    
+    Parameters:
+        files: Uploaded documents (PDF/MD/TXT), multiple supported
+        simulation_requirement: Simulation requirement description (required)
+        project_name: Project name (optional)
+        additional_context: Additional context/notes (optional)
         
-    返回：
+    Returns:
         {
             "success": true,
             "data": {
@@ -147,92 +151,121 @@ def generate_ontology():
         }
     """
     try:
-        logger.info("=== 开始生成本体定义 ===")
+        logger.info("=== Starting ontology generation ===")
         
-        # 获取参数
+        # Get request parameters
         simulation_requirement = request.form.get('simulation_requirement', '')
         project_name = request.form.get('project_name', 'Unnamed Project')
         additional_context = request.form.get('additional_context', '')
         
-        logger.debug(f"项目名称: {project_name}")
-        logger.debug(f"模拟需求: {simulation_requirement[:100]}...")
+        logger.info(f"Project name: {project_name}")
+        logger.debug(f"Simulation requirement: {simulation_requirement[:100]}...")
         
         if not simulation_requirement:
+            logger.warning("Missing simulation_requirement parameter")
             return jsonify({
                 "success": False,
-                "error": "请提供模拟需求描述 (simulation_requirement)"
+                "error": "simulation_requirement parameter is required"
             }), 400
         
-        # 获取上传的文件
+        # Get uploaded files
         uploaded_files = request.files.getlist('files')
         if not uploaded_files or all(not f.filename for f in uploaded_files):
+            logger.warning("No files provided in request")
             return jsonify({
                 "success": False,
-                "error": "请至少上传一个文档文件"
+                "error": "At least one document file must be uploaded"
             }), 400
         
-        # 创建项目
+        # Create project
         project = ProjectManager.create_project(name=project_name)
         project.simulation_requirement = simulation_requirement
-        logger.info(f"创建项目: {project.project_id}")
+        logger.info(f"Created project: {project.project_id}")
         
-        # 保存文件并提取文本
+        # Save files and extract text
         document_texts = []
         all_text = ""
         
         for file in uploaded_files:
             if file and file.filename and allowed_file(file.filename):
-                # 保存文件到项目目录
-                file_info = ProjectManager.save_file_to_project(
-                    project.project_id, 
-                    file, 
-                    file.filename
-                )
-                project.files.append({
-                    "filename": file_info["original_filename"],
-                    "size": file_info["size"]
-                })
-                
-                # 提取文本
-                text = FileParser.extract_text(file_info["path"])
-                text = TextProcessor.preprocess_text(text)
-                document_texts.append(text)
-                all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
+                try:
+                    # Save file to project directory
+                    file_info = ProjectManager.save_file_to_project(
+                        project.project_id, 
+                        file, 
+                        file.filename
+                    )
+                    project.files.append({
+                        "filename": file_info["original_filename"],
+                        "size": file_info["size"]
+                    })
+                    
+                    # Extract text
+                    text = FileParser.extract_text(file_info["path"])
+                    text = TextProcessor.preprocess_text(text)
+                    document_texts.append(text)
+                    all_text += f"\n\n=== {file_info['original_filename']} ===\n{text}"
+                    logger.debug(f"Processed file: {file_info['original_filename']}")
+                    
+                except Exception as e:
+                    logger.error(f"Error processing file {file.filename}: {str(e)}")
+                    # Continue with other files
+                    continue
         
         if not document_texts:
             ProjectManager.delete_project(project.project_id)
+            logger.warning("No documents were successfully processed")
             return jsonify({
                 "success": False,
-                "error": "没有成功处理任何文档，请检查文件格式"
+                "error": "No documents could be processed. Please check file format (PDF, MD, TXT)"
             }), 400
         
-        # 保存提取的文本
+        # Save extracted text
         project.total_text_length = len(all_text)
         ProjectManager.save_extracted_text(project.project_id, all_text)
-        logger.info(f"文本提取完成，共 {len(all_text)} 字符")
+        logger.info(f"Text extraction complete: {len(all_text)} characters")
         
-        # 生成本体
-        logger.info("调用 LLM 生成本体定义...")
-        generator = OntologyGenerator()
-        ontology = generator.generate(
-            document_texts=document_texts,
-            simulation_requirement=simulation_requirement,
-            additional_context=additional_context if additional_context else None
-        )
-        
-        # 保存本体到项目
-        entity_count = len(ontology.get("entity_types", []))
-        edge_count = len(ontology.get("edge_types", []))
-        logger.info(f"本体生成完成: {entity_count} 个实体类型, {edge_count} 个关系类型")
-        
-        project.ontology = {
-            "entity_types": ontology.get("entity_types", []),
-            "edge_types": ontology.get("edge_types", [])
-        }
-        project.analysis_summary = ontology.get("analysis_summary", "")
-        project.status = ProjectStatus.ONTOLOGY_GENERATED
-        ProjectManager.save_project(project)
-        logger.info(f"=== 本体生成完成 === 项目ID: {project.project_id}")
+        # Generate ontology using LLM
+        try:
+            logger.info(f"Calling LLM ({Config.LLM_PROVIDER}) to generate ontology...")
+            generator = OntologyGenerator()
+            ontology = generator.generate(
+                document_texts=document_texts,
+                simulation_requirement=simulation_requirement,
+                additional_context=additional_context if additional_context else None
+            )
+            
+            # Save ontology to project
+            entity_count = len(ontology.get("entity_types", []))
+            edge_count = len(ontology.get("edge_types", []))
+            logger.info(f"Ontology generated: {entity_count} entity types, {edge_count} relationship types")
+            
+            project.ontology = {
+                "entity_types": ontology.get("entity_types", []),
+                "edge_types": ontology.get("edge_types", [])
+            }
+            project.analysis_summary = ontology.get("analysis_summary", "")
+            project.status = ProjectStatus.ONTOLOGY_GENERATED
+            ProjectManager.save_project(project)
+            logger.info(f"=== Ontology generation complete === Project ID: {project.project_id}")
+            
+        except ValueError as e:
+            logger.error(f"LLM JSON parsing error: {str(e)}")
+            ProjectManager.delete_project(project.project_id)
+            return jsonify({
+                "success": False,
+                "error": f"LLM returned invalid response: {str(e)}",
+                "provider": Config.LLM_PROVIDER
+            }), 500
+        except Exception as e:
+            logger.error(f"LLM API error: {str(e)}", exc_info=True)
+            ProjectManager.delete_project(project.project_id)
+            return jsonify({
+                "success": False,
+                "error": f"LLM API error ({Config.LLM_PROVIDER}): {str(e)}",
+                "provider": Config.LLM_PROVIDER,
+                "details": traceback.format_exc()
+            }), 500
         
         return jsonify({
             "success": True,
@@ -247,14 +280,17 @@ def generate_ontology():
         })
         
     except Exception as e:
-        return jsonify({
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }), 500
+        logger.error(f"Unexpected error in generate_ontology: {str(e)}", exc_info=True)
+        return jsonify(
+            {
+                "success": False,
+                "error": str(e),
+                "details": traceback.format_exc()
+            }
+        ), 500
 
 
-# ============== 接口2：构建图谱 ==============
+# ============== Endpoint 2: Build graph ==============
 
 @graph_bp.route('/build', methods=['POST'])
 def build_graph():
