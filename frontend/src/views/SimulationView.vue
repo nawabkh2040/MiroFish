@@ -46,7 +46,7 @@
         />
       </div>
 
-      <!-- Right Panel: Step2 环境搭建 -->
+      <!-- Right Panel: Step 2 Environment Setup -->
       <div class="panel-wrapper right" :style="rightPanelStyle">
         <Step2EnvSetup
           :simulationId="currentSimulationId"
@@ -137,7 +137,7 @@ const toggleMaximize = (target) => {
 }
 
 const handleGoBack = () => {
-  // 返回到 process 页面
+  // Return to process page
   if (projectData.value?.project_id) {
     router.push({ name: 'Process', params: { projectId: projectData.value.project_id } })
   } else {

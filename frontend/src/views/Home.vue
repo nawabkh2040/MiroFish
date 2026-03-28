@@ -118,13 +118,31 @@
           </div>
         </div>
 
-        <!-- 右栏：交互控制台 -->
+        <!-- Right panel: Interactive console -->
         <div class="right-panel">
           <div class="console-box">
-            <!-- Upload area -->
-            <div class="console-section">
+            <!-- Input method tabs -->
+            <div class="console-section input-tabs">
+              <div class="tab-header">
+                <span class="console-label">01 / Reality Seeds - Input Method</span>
+              </div>
+              <div class="tabs-container">
+                <button 
+                  v-for="tab in inputTabs" 
+                  :key="tab"
+                  class="tab-btn"
+                  :class="{ active: activeTab === tab }"
+                  @click="activeTab = tab"
+                >
+                  {{ tab }}
+                </button>
+              </div>
+            </div>
+
+            <!-- File Upload Tab -->
+            <div v-if="activeTab === 'File Upload'" class="console-section">
               <div class="console-header">
-                <span class="console-label">01 / Reality Seeds</span>
+                <span class="console-label">📄 Upload Files</span>
                 <span class="console-meta">Formats: PDF, MD, TXT</span>
               </div>
               
@@ -162,12 +180,116 @@
               </div>
             </div>
 
+            <!-- Google Docs Tab -->
+            <div v-if="activeTab === 'Google Docs'" class="console-section">
+              <div class="console-header">
+                <span class="console-label">🔗 Google Docs Link</span>
+              </div>
+              <div class="link-input-wrapper">
+                <input
+                  v-model="googleDocUrl"
+                  type="text"
+                  class="link-input"
+                  placeholder="Paste your Google Docs shareable link here (e.g., https://docs.google.com/document/d/...)"
+                  :disabled="loading"
+                />
+                <button 
+                  @click="fetchGoogleDoc"
+                  class="fetch-btn"
+                  :disabled="!googleDocUrl.trim() || loading"
+                >
+                  {{ loading ? 'Fetching...' : 'Fetch Content' }}
+                </button>
+              </div>
+              <div v-if="extractedContent.googleDoc" class="extracted-preview">
+                <div class="preview-title">Extracted Content:</div>
+                <div class="preview-text">{{ extractedContent.googleDoc.substring(0, 200) }}...</div>
+              </div>
+            </div>
+
+            <!-- News Link Tab -->
+            <div v-if="activeTab === 'News Link'" class="console-section">
+              <div class="console-header">
+                <span class="console-label">📰 News Article Link</span>
+              </div>
+              <div class="link-input-wrapper">
+                <input
+                  v-model="newsUrl"
+                  type="text"
+                  class="link-input"
+                  placeholder="Paste your news article URL here (e.g., https://news.example.com/article)"
+                  :disabled="loading"
+                />
+                <button 
+                  @click="fetchNewsArticle"
+                  class="fetch-btn"
+                  :disabled="!newsUrl.trim() || loading"
+                >
+                  {{ loading ? 'Fetching...' : 'Fetch Article' }}
+                </button>
+              </div>
+              <div v-if="extractedContent.news" class="extracted-preview">
+                <div class="preview-title">Extracted Content:</div>
+                <div class="preview-text">{{ extractedContent.news.substring(0, 200) }}...</div>
+              </div>
+            </div>
+
+            <!-- Paste Content Tab -->
+            <div v-if="activeTab === 'Paste Content'" class="console-section">
+              <div class="console-header">
+                <span class="console-label">📋 Paste Content Directly</span>
+              </div>
+              <div class="paste-input-wrapper">
+                <textarea
+                  v-model="pastedContent"
+                  class="paste-input"
+                  placeholder="Paste any content here - text, article content, report excerpts, etc."
+                  rows="10"
+                  :disabled="loading"
+                ></textarea>
+                <div class="char-count">{{ pastedContent.length }} characters</div>
+              </div>
+            </div>
+
+            <!-- Web Scrape Tab -->
+            <div v-if="activeTab === 'Web Scrape'" class="console-section">
+              <div class="console-header">
+                <span class="console-label">🌐 Web Scrape URL</span>
+              </div>
+              <div class="link-input-wrapper">
+                <input
+                  v-model="webScrapUrl"
+                  type="text"
+                  class="link-input"
+                  placeholder="Enter any website URL to scrape content (e.g., https://website.com/article)"
+                  :disabled="loading"
+                />
+                <button 
+                  @click="scrapeWebContent"
+                  class="fetch-btn"
+                  :disabled="!webScrapUrl.trim() || loading"
+                >
+                  {{ loading ? 'Scraping...' : 'Scrape Content' }}
+                </button>
+              </div>
+              <div v-if="extractedContent.webScrape" class="extracted-preview">
+                <div class="preview-title">Extracted Content:</div>
+                <div class="preview-text">{{ extractedContent.webScrape.substring(0, 200) }}...</div>
+              </div>
+            </div>
+
+            <!-- Error message display -->
+            <div v-if="error" class="error-message">
+              <span class="error-icon">⚠️</span>
+              {{ error }}
+            </div>
+
             <!-- Divider -->
             <div class="console-divider">
               <span>INPUT PARAMETERS</span>
             </div>
 
-            <!-- 输入区域 -->
+            <!-- Input area -->
             <div class="console-section">
               <div class="console-header">
                 <span class="console-label">>_ 02 / Simulation prompt</span>
@@ -200,7 +322,7 @@
         </div>
       </section>
 
-      <!-- 历史项目数据库 -->
+      <!-- Historical Projects Database -->
       <HistoryDatabase />
     </div>
   </div>
@@ -213,41 +335,64 @@ import HistoryDatabase from '../components/HistoryDatabase.vue'
 
 const router = useRouter()
 
-// 表单数据
+// Input method tabs
+const inputTabs = ref(['File Upload', 'Google Docs', 'News Link', 'Paste Content', 'Web Scrape'])
+const activeTab = ref('File Upload')
+
+// Form data
 const formData = ref({
   simulationRequirement: ''
 })
 
-// 文件列表
+// File list
 const files = ref([])
 
-// 状态
+// URL inputs
+const googleDocUrl = ref('')
+const newsUrl = ref('')
+const pastedContent = ref('')
+const webScrapUrl = ref('')
+
+// Extracted content storage
+const extractedContent = ref({
+  googleDoc: '',
+  news: '',
+  webScrape: ''
+})
+
+// Status
 const loading = ref(false)
 const error = ref('')
 const isDragOver = ref(false)
 
-// 文件输入引用
+// File input reference
 const fileInput = ref(null)
 
-// 计算属性:是否可以提交
+// Computed: whether submission is allowed
 const canSubmit = computed(() => {
-  return formData.value.simulationRequirement.trim() !== '' && files.value.length > 0
+  return formData.value.simulationRequirement.trim() !== '' && (
+    files.value.length > 0 || 
+    extractedContent.value.googleDoc || 
+    extractedContent.value.news || 
+    pastedContent.value.trim() ||
+    extractedContent.value.webScrape
+  )
 })
 
-// 触发文件选择
+// Trigger file selection
 const triggerFileInput = () => {
   if (!loading.value) {
     fileInput.value?.click()
   }
 }
 
-// 处理文件选择
+// Handle file selection
 const handleFileSelect = (event) => {
   const selectedFiles = Array.from(event.target.files)
   addFiles(selectedFiles)
 }
 
-// 处理拖拽相关
+// Handle drag and drop
 const handleDragOver = (e) => {
   if (!loading.value) {
     isDragOver.value = true
@@ -266,7 +411,7 @@ const handleDrop = (e) => {
   addFiles(droppedFiles)
 }
 
-// 添加文件
+// Add files
 const addFiles = (newFiles) => {
   const validFiles = newFiles.filter(file => {
     const ext = file.name.split('.').pop().toLowerCase()
@@ -275,12 +420,90 @@ const addFiles = (newFiles) => {
   files.value.push(...validFiles)
 }
 
-// 移除文件
+// Remove file
 const removeFile = (index) => {
   files.value.splice(index, 1)
 }
 
-// 滚动到底部
+// Fetch Google Docs content
+const fetchGoogleDoc = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    const response = await fetch('/api/extract-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'google_docs',
+        url: googleDocUrl.value
+      })
+    })
+    
+    if (!response.ok) throw new Error('Failed to fetch Google Docs content')
+    const data = await response.json()
+    extractedContent.value.googleDoc = data.content
+  } catch (err) {
+    error.value = `Failed to fetch Google Docs: ${err.message}`
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fetch news article content
+const fetchNewsArticle = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    const response = await fetch('/api/extract-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'news',
+        url: newsUrl.value
+      })
+    })
+    
+    if (!response.ok) throw new Error('Failed to fetch news article')
+    const data = await response.json()
+    extractedContent.value.news = data.content
+  } catch (err) {
+    error.value = `Failed to fetch news article: ${err.message}`
+  } finally {
+    loading.value = false
+  }
+}
+
+// Scrape web content
+const scrapeWebContent = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    const response = await fetch('/api/extract-content', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        type: 'web_scrape',
+        url: webScrapUrl.value
+      })
+    })
+    
+    if (!response.ok) throw new Error('Failed to scrape web content')
+    const data = await response.json()
+    extractedContent.value.webScrape = data.content
+  } catch (err) {
+    error.value = `Failed to scrape web content: ${err.message}`
+  } finally {
+    loading.value = false
+  }
+}
+
+// Scroll to bottom
 const scrollToBottom = () => {
   window.scrollTo({
     top: document.body.scrollHeight,
@@ -288,15 +511,46 @@ const scrollToBottom = () => {
   })
 }
 
-// 开始模拟 - 立即跳转，API调用在Process页面进行
+// Start simulation - navigate immediately, API calls are made on the Process page
 const startSimulation = () => {
   if (!canSubmit.value || loading.value) return
   
-  // 存储待上传的数据
+  // Combine all input sources into files
+  const allContent = []
+  
+  // Add uploaded files
+  allContent.push(...files.value)
+  
+  // Add extracted content as text files
+  if (extractedContent.value.googleDoc) {
+    const googleDocBlob = new Blob([extractedContent.value.googleDoc], { type: 'text/plain' })
+    googleDocBlob.name = 'google_docs_content.txt'
+    allContent.push(googleDocBlob)
+  }
+  
+  if (extractedContent.value.news) {
+    const newsBlob = new Blob([extractedContent.value.news], { type: 'text/plain' })
+    newsBlob.name = 'news_article.txt'
+    allContent.push(newsBlob)
+  }
+  
+  if (pastedContent.value.trim()) {
+    const pasteBlob = new Blob([pastedContent.value], { type: 'text/plain' })
+    pasteBlob.name = 'pasted_content.txt'
+    allContent.push(pasteBlob)
+  }
+  
+  if (extractedContent.value.webScrape) {
+    const webBlob = new Blob([extractedContent.value.webScrape], { type: 'text/plain' })
+    webBlob.name = 'web_content.txt'
+    allContent.push(webBlob)
+  }
+  
+  // Store data waiting to be uploaded
   import('../store/pendingUpload.js').then(({ setPendingUpload }) => {
-    setPendingUpload(files.value, formData.value.simulationRequirement)
+    setPendingUpload(allContent, formData.value.simulationRequirement)
     
-    // 立即跳转到Process页面（使用特殊标识表示新建项目）
+    // Immediately navigate to Process page (use special identifier for new project)
     router.push({
       name: 'Process',
       params: { projectId: 'new' }
@@ -306,7 +560,7 @@ const startSimulation = () => {
 </script>
 
 <style scoped>
-/* 全局变量与重置 */
+/* Global variables and reset */
 :root {
   --black: #000000;
   --white: #FFFFFF;
@@ -315,8 +569,8 @@ const startSimulation = () => {
   --gray-text: #666666;
   --border: #E5E5E5;
   /* 
-    使用 Space Grotesk 作为主要标题字体，JetBrains Mono 作为代码/标签字体
-    确保已在 index.html 引入这些 Google Fonts 
+    Use Space Grotesk as primary title font, JetBrains Mono as code/tag font
+    Make sure these Google Fonts are imported in index.html 
   */
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Space Grotesk', 'Noto Sans SC', system-ui, sans-serif;
@@ -330,7 +584,7 @@ const startSimulation = () => {
   color: var(--black);
 }
 
-/* 顶部导航 */
+/* Top navigation */
 .navbar {
   height: 60px;
   background: var(--black);
@@ -373,14 +627,14 @@ const startSimulation = () => {
   font-family: sans-serif;
 }
 
-/* 主要内容区 */
+/* Main content area */
 .main-content {
   max-width: 1400px;
   margin: 0 auto;
   padding: 60px 40px;
 }
 
-/* Hero 区域 */
+/* Hero section */
 .hero-section {
   display: flex;
   justify-content: space-between;
@@ -511,7 +765,7 @@ const startSimulation = () => {
 }
 
 .hero-logo {
-  max-width: 500px; /* 调整logo大小 */
+  max-width: 500px; /* Adjust logo size */
   width: 100%;
 }
 
@@ -533,7 +787,7 @@ const startSimulation = () => {
   border-color: var(--orange);
 }
 
-/* Dashboard 双栏布局 */
+/* Dashboard two-column layout */
 .dashboard-section {
   display: flex;
   gap: 60px;
@@ -548,7 +802,7 @@ const startSimulation = () => {
   flex-direction: column;
 }
 
-/* 左侧面板 */
+/* Left panel */
 .left-panel {
   flex: 0.8;
 }
@@ -604,7 +858,7 @@ const startSimulation = () => {
   color: #999;
 }
 
-/* 项目模拟步骤介绍 */
+/* Project simulation steps introduction */
 .steps-container {
   border: 1px solid var(--border);
   padding: 30px;
@@ -886,5 +1140,161 @@ const startSimulation = () => {
     max-width: 200px;
     margin-bottom: 20px;
   }
+}
+
+/* Tab interface styles */
+.input-tabs {
+  padding: 15px 20px !important;
+  border-bottom: 1px solid #EEE;
+}
+
+.tab-header {
+  margin-bottom: 12px;
+}
+
+.tabs-container {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  padding: 8px 14px;
+  background: #F5F5F5;
+  border: 1px solid #DDD;
+  color: #666;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: #E5E5E5;
+}
+
+.tab-btn.active {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
+
+/* Link input styles */
+.link-input-wrapper {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.link-input {
+  flex: 1;
+  padding: 12px 15px;
+  border: 1px solid #DDD;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.link-input:focus {
+  border-color: var(--orange);
+}
+
+.fetch-btn {
+  padding: 12px 20px;
+  background: var(--black);
+  color: var(--white);
+  border: none;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.fetch-btn:hover:not(:disabled) {
+  background: var(--orange);
+}
+
+.fetch-btn:disabled {
+  background: #CCC;
+  cursor: not-allowed;
+}
+
+/* Paste input styles */
+.paste-input-wrapper {
+  position: relative;
+}
+
+.paste-input {
+  width: 100%;
+  padding: 15px;
+  border: 1px solid #DDD;
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.paste-input:focus {
+  border-color: var(--orange);
+}
+
+.char-count {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: #AAA;
+}
+
+/* Extracted content preview */
+.extracted-preview {
+  background: #F9F9F9;
+  border: 1px solid #E5E5E5;
+  padding: 12px 15px;
+  margin-top: 12px;
+  border-radius: 3px;
+}
+
+.preview-title {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #999;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-text {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Error message display */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  background: #FFE5E5;
+  border: 1px solid #FFB3B3;
+  border-radius: 3px;
+  color: #CC0000;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin-top: 12px;
+}
+
+.error-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
 }
 </style>

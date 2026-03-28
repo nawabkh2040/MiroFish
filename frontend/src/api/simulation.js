@@ -1,7 +1,7 @@
 import service, { requestWithRetry } from './index'
 
 /**
- * 创建模拟
+ * Create simulation
  * @param {Object} data - { project_id, graph_id?, enable_twitter?, enable_reddit? }
  */
 export const createSimulation = (data) => {
@@ -9,7 +9,7 @@ export const createSimulation = (data) => {
 }
 
 /**
- * 准备模拟环境（异步任务）
+ * Prepare simulation environment (async task)
  * @param {Object} data - { simulation_id, entity_types?, use_llm_for_profiles?, parallel_profile_count?, force_regenerate? }
  */
 export const prepareSimulation = (data) => {

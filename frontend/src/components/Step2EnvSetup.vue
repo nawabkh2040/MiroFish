@@ -6,11 +6,11 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">01</span>
-            <span class="step-title">模拟实例初始化</span>
+            <span class="step-title">Simulation Instance Initialization</span>
           </div>
           <div class="step-status">
-            <span v-if="phase > 0" class="badge success">已完成</span>
-            <span v-else class="badge processing">初始化</span>
+            <span v-if="phase > 0" class="badge success">Completed</span>
+            <span v-else class="badge processing">Initializing</span>
           </div>
         </div>
         
@@ -46,26 +46,26 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">02</span>
-            <span class="step-title">生成 Agent 人设</span>
+            <span class="step-title">Generate Agent Personas</span>
           </div>
           <div class="step-status">
-            <span v-if="phase > 1" class="badge success">已完成</span>
+            <span v-if="phase > 1" class="badge success">Completed</span>
             <span v-else-if="phase === 1" class="badge processing">{{ prepareProgress }}%</span>
-            <span v-else class="badge pending">等待</span>
+            <span v-else class="badge pending">Waiting</span>
           </div>
         </div>
 
         <div class="card-content">
           <p class="api-note">POST /api/simulation/prepare</p>
           <p class="description">
-            结合上下文，自动调用工具从知识图谱梳理实体与关系，初始化模拟个体，并基于现实种子赋予他们独特的行为与记忆
+            Combining context, automatically invoke tools to identify entities and relationships from the knowledge graph, initialize simulation individuals, and endow them with unique behaviors and memories based on reality seeds
           </p>
 
           <!-- Profiles Stats -->
           <div v-if="profiles.length > 0" class="stats-grid">
             <div class="stat-card">
               <span class="stat-value">{{ profiles.length }}</span>
-              <span class="stat-label">当前Agent数</span>
+              <span class="stat-label">Current Agent Count</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ expectedTotal || '-' }}</span>
@@ -73,14 +73,14 @@
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ totalTopicsCount }}</span>
-              <span class="stat-label">现实种子当前关联话题数</span>
+              <span class="stat-label">Reality Seeds Related Topics</span>
             </div>
           </div>
 
           <!-- Profiles List Preview -->
           <div v-if="profiles.length > 0" class="profiles-preview">
             <div class="preview-header">
-              <span class="preview-title">已生成的 Agent 人设</span>
+              <span class="preview-title">Generated Agent Personas</span>
             </div>
             <div class="profiles-list">
               <div 
@@ -94,9 +94,9 @@
                   <span class="profile-username">@{{ profile.name || `agent_${idx}` }}</span>
                 </div>
                 <div class="profile-meta">
-                  <span class="profile-profession">{{ profile.profession || '未知职业' }}</span>
+                  <span class="profile-profession">{{ profile.profession || 'Unknown profession' }}</span>
                 </div>
-                <p class="profile-bio">{{ profile.bio || '暂无简介' }}</p>
+                <p class="profile-bio">{{ profile.bio || 'No biography' }}</p>
                 <div v-if="profile.interested_topics?.length" class="profile-topics">
                   <span 
                     v-for="topic in profile.interested_topics.slice(0, 3)" 
@@ -118,12 +118,12 @@
         <div class="card-header">
           <div class="step-info">
             <span class="step-num">03</span>
-            <span class="step-title">生成双平台模拟配置</span>
+            <span class="step-title">Generate Dual-Platform Simulation Configuration</span>
           </div>
           <div class="step-status">
-            <span v-if="phase > 2" class="badge success">已完成</span>
-            <span v-else-if="phase === 2" class="badge processing">生成中</span>
-            <span v-else class="badge pending">等待</span>
+            <span v-if="phase > 2" class="badge success">Completed</span>
+            <span v-else-if="phase === 2" class="badge processing">Generating</span>
+            <span v-else class="badge pending">Waiting</span>
           </div>
         </div>
 
@@ -147,8 +147,8 @@
                   <span class="config-item-value">{{ simulationConfig.time_config?.minutes_per_round || '-' }} 分钟</span>
                 </div>
                 <div class="config-item">
-                  <span class="config-item-label">总轮次</span>
-                  <span class="config-item-value">{{ Math.floor((simulationConfig.time_config?.total_simulation_hours * 60 / simulationConfig.time_config?.minutes_per_round)) || '-' }} 轮</span>
+                  <span class="config-item-label">Total Rounds</span>
+                  <span class="config-item-value">{{ Math.floor((simulationConfig.time_config?.total_simulation_hours * 60 / simulationConfig.time_config?.minutes_per_round)) || '-' }} rounds</span>
                 </div>
                 <div class="config-item">
                   <span class="config-item-label">每小时活跃</span>
@@ -205,7 +205,7 @@
                   
                   <!-- 活跃时间轴 -->
                   <div class="agent-timeline">
-                    <span class="timeline-label">活跃时段</span>
+                    <span class="timeline-label">Active Period</span>
                     <div class="mini-timeline">
                       <div 
                         v-for="hour in 24" 
@@ -228,34 +228,34 @@
                   <div class="agent-params">
                     <div class="param-group">
                       <div class="param-item">
-                        <span class="param-label">发帖/时</span>
+                        <span class="param-label">Posts/Hour</span>
                         <span class="param-value">{{ agent.posts_per_hour }}</span>
                       </div>
                       <div class="param-item">
-                        <span class="param-label">评论/时</span>
+                        <span class="param-label">Comments/Hour</span>
                         <span class="param-value">{{ agent.comments_per_hour }}</span>
                       </div>
                       <div class="param-item">
-                        <span class="param-label">响应延迟</span>
+                        <span class="param-label">Response Delay</span>
                         <span class="param-value">{{ agent.response_delay_min }}-{{ agent.response_delay_max }}min</span>
                       </div>
                     </div>
                     <div class="param-group">
                       <div class="param-item">
-                        <span class="param-label">活跃度</span>
+                        <span class="param-label">Activity Level</span>
                         <span class="param-value with-bar">
                           <span class="mini-bar" :style="{ width: (agent.activity_level * 100) + '%' }"></span>
                           {{ (agent.activity_level * 100).toFixed(0) }}%
                         </span>
                       </div>
                       <div class="param-item">
-                        <span class="param-label">情感倾向</span>
+                        <span class="param-label">Sentiment Bias</span>
                         <span class="param-value" :class="agent.sentiment_bias > 0 ? 'positive' : agent.sentiment_bias < 0 ? 'negative' : 'neutral'">
                           {{ agent.sentiment_bias > 0 ? '+' : '' }}{{ agent.sentiment_bias?.toFixed(1) }}
                         </span>
                       </div>
                       <div class="param-item">
-                        <span class="param-label">影响力</span>
+                        <span class="param-label">Influence</span>
                         <span class="param-value highlight">{{ agent.influence_weight?.toFixed(1) }}</span>
                       </div>
                     </div>
@@ -267,12 +267,12 @@
             <!-- 平台配置 -->
             <div class="config-block">
               <div class="config-block-header">
-                <span class="config-block-title">推荐算法配置</span>
+                <span class="config-block-title">Recommendation Algorithm Configuration</span>
               </div>
               <div class="platforms-grid">
                 <div v-if="simulationConfig.twitter_config" class="platform-card">
                   <div class="platform-card-header">
-                    <span class="platform-name">平台 1：广场 / 信息流</span>
+                    <span class="platform-name">Platform 1: Information Feed</span>
                   </div>
                   <div class="platform-params">
                     <div class="param-row">
@@ -299,7 +299,7 @@
                 </div>
                 <div v-if="simulationConfig.reddit_config" class="platform-card">
                   <div class="platform-card-header">
-                    <span class="platform-name">平台 2：话题 / 社区</span>
+                    <span class="platform-name">Platform 2: Topic Community</span>
                   </div>
                   <div class="platform-params">
                     <div class="param-row">
@@ -330,7 +330,7 @@
             <!-- LLM 配置推理 -->
             <div v-if="simulationConfig.generation_reasoning" class="config-block">
               <div class="config-block-header">
-                <span class="config-block-title">LLM 配置推理</span>
+                <span class="config-block-title">LLM Configuration Reasoning</span>
               </div>
               <div class="reasoning-content">
                 <div 
@@ -433,7 +433,7 @@
 
         <div class="card-content">
           <p class="api-note">POST /api/simulation/start</p>
-          <p class="description">模拟环境已准备完成，可以开始运行模拟</p>
+          <p class="description">Simulation environment is ready, you can start the simulation</p>
           
           <!-- 模拟轮数配置 - 只有在配置生成完成且轮数计算出来后才显示 -->
           <div v-if="simulationConfig && autoGeneratedRounds" class="rounds-config-section">
@@ -521,7 +521,7 @@
               :disabled="phase < 4"
               @click="handleStartSimulation"
             >
-              开始双世界并行模拟 ➝
+              Start Dual-World Parallel Simulation ➝
             </button>
           </div>
         </div>
@@ -680,7 +680,7 @@ watch(currentStage, (newStage) => {
     phase.value = 2
     // 进入配置生成阶段，开始轮询配置
     if (!configTimer) {
-      addLog('开始生成双平台模拟配置...')
+      addLog('Starting dual-platform simulation configuration generation...')
       startConfigPolling()
     }
   } else if (newStage === '准备模拟脚本' || newStage === 'copying_scripts') {
@@ -745,10 +745,10 @@ const handleStartSimulation = () => {
   if (useCustomRounds.value) {
     // 用户自定义轮数，传递 max_rounds 参数
     params.maxRounds = customMaxRounds.value
-    addLog(`开始模拟，自定义轮数: ${customMaxRounds.value} 轮`)
+    addLog(`Beginning simulation, custom rounds: ${customMaxRounds.value} rounds`)
   } else {
     // 用户选择保持自动生成的轮数，不传递 max_rounds 参数
-    addLog(`开始模拟，使用自动配置轮数: ${autoGeneratedRounds.value} 轮`)
+    addLog(`Beginning simulation, using auto-configured rounds: ${autoGeneratedRounds.value} rounds`)
   }
   
   emit('next-step', params)
@@ -776,7 +776,7 @@ const startPrepareSimulation = async () => {
   // 标记第一步完成，开始第二步
   phase.value = 1
   addLog(`模拟实例已创建: ${props.simulationId}`)
-  addLog('正在准备模拟环境...')
+  addLog('Preparing simulation environment...')
   emit('update-status', 'processing')
   
   try {
@@ -794,7 +794,7 @@ const startPrepareSimulation = async () => {
       }
       
       taskId.value = res.data.task_id
-      addLog(`准备任务已启动`)
+      addLog(`Preparation task started`)
       addLog(`  └─ Task ID: ${res.data.task_id}`)
       
       // 立即设置预期Agent总数（从prepare接口返回值获取）
@@ -806,7 +806,7 @@ const startPrepareSimulation = async () => {
         }
       }
       
-      addLog('开始轮询准备进度...')
+      addLog('Starting progress polling...')
       // 开始轮询进度
       startPolling()
       // 开始实时获取 Profiles
@@ -934,7 +934,7 @@ const fetchProfilesRealtime = async () => {
         const latestProfile = profiles.value[currentCount - 1]
         const profileName = latestProfile?.name || latestProfile?.username || `Agent_${currentCount}`
         if (currentCount === 1) {
-          addLog(`开始生成Agent人设...`)
+          addLog(`Starting Agent persona generation...`)
         }
         addLog(`→ Agent人设 ${currentCount}/${total}: ${profileName} (${latestProfile?.profession || '未知职业'})`)
         
@@ -974,9 +974,9 @@ const fetchConfigRealtime = async () => {
       if (data.generation_stage && data.generation_stage !== lastLoggedConfigStage) {
         lastLoggedConfigStage = data.generation_stage
         if (data.generation_stage === 'generating_profiles') {
-          addLog('正在生成Agent人设配置...')
+          addLog('Generating Agent persona configuration...')
         } else if (data.generation_stage === 'generating_config') {
-          addLog('正在调用LLM生成模拟配置参数...')
+          addLog('Calling LLM to generate simulation configuration parameters...')
         }
       }
       
@@ -997,13 +997,13 @@ const fetchConfigRealtime = async () => {
         // 显示时间配置详情
         if (data.config.time_config) {
           const tc = data.config.time_config
-          addLog(`时间配置: 每轮${tc.minutes_per_round}分钟, 共${Math.floor((tc.total_simulation_hours * 60) / tc.minutes_per_round)}轮`)
+          addLog(`Time Configuration: ${tc.minutes_per_round}min/round, ${Math.floor((tc.total_simulation_hours * 60) / tc.minutes_per_round)} total rounds`)
         }
         
         // 显示事件配置
         if (data.config.event_config?.narrative_direction) {
           const narrative = data.config.event_config.narrative_direction
-          addLog(`叙事方向: ${narrative.length > 50 ? narrative.substring(0, 50) + '...' : narrative}`)
+          addLog(`Narrative Direction: ${narrative.length > 50 ? narrative.substring(0, 50) + '...' : narrative}`)
         }
         
         stopConfigPolling()
@@ -1031,7 +1031,7 @@ const loadPreparedData = async () => {
     if (res.success && res.data) {
       if (res.data.config_generated && res.data.config) {
         simulationConfig.value = res.data.config
-        addLog('✓ 模拟配置加载成功')
+        addLog('✓ Simulation configuration loaded successfully')
         
         // 显示详细配置摘要
         if (res.data.summary) {

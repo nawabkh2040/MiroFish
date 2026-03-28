@@ -2,24 +2,24 @@
   <div class="graph-panel">
     <div class="panel-header">
       <span class="panel-title">Graph Relationship Visualization</span>
-      <!-- 顶部工具栏 (Internal Top Right) -->
+      <!-- Top toolbar -->
       <div class="header-tools">
-        <button class="tool-btn" @click="$emit('refresh')" :disabled="loading" title="刷新图谱">
+        <button class="tool-btn" @click="$emit('refresh')" :disabled="loading" title="Refresh graph">
           <span class="icon-refresh" :class="{ 'spinning': loading }">↻</span>
           <span class="btn-text">Refresh</span>
         </button>
-        <button class="tool-btn" @click="$emit('toggle-maximize')" title="最大化/还原">
+        <button class="tool-btn" @click="$emit('toggle-maximize')" title="Maximize/Restore">
           <span class="icon-maximize">⛶</span>
         </button>
       </div>
     </div>
     
     <div class="graph-container" ref="graphContainer">
-      <!-- 图谱可视化 -->
+      <!-- Graph visualization -->
       <div v-if="graphData" class="graph-view">
         <svg ref="graphSvg" class="graph-svg"></svg>
         
-        <!-- 构建中/模拟中提示 -->
+        <!-- Building/Simulating hint -->
         <div v-if="currentPhase === 1 || isSimulating" class="graph-building-hint">
           <div class="memory-icon-wrapper">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="memory-icon">
