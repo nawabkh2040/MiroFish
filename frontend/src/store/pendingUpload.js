@@ -1,6 +1,6 @@
 /**
  * Temporarily store files and requirements waiting to be uploaded
- * 用于首页点击启动引擎后立即跳转，在Process页面再进行API调用
+ * Used for home page — immediately navigate on clicking 'Start Engine', then make the API call on the Process page
  */
 import { reactive } from 'vue'
 

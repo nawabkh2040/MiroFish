@@ -20,7 +20,7 @@ export function generateOntology(formData) {
 
 /**
  * Build graph
- * @param {Object} data - 包含project_id, graph_name等
+ * @param {Object} data - Contains project_id, graph_name, etc.
  * @returns {Promise}
  */
 export function buildGraph(data) {
@@ -34,8 +34,8 @@ export function buildGraph(data) {
 }
 
 /**
- * 查询任务状态
- * @param {String} taskId - 任务ID
+ * Query task status
+ * @param {String} taskId - Task ID
  * @returns {Promise}
  */
 export function getTaskStatus(taskId) {
@@ -46,8 +46,8 @@ export function getTaskStatus(taskId) {
 }
 
 /**
- * 获取图谱数据
- * @param {String} graphId - 图谱ID
+ * Get graph data
+ * @param {String} graphId - Graph ID
  * @returns {Promise}
  */
 export function getGraphData(graphId) {
@@ -58,8 +58,8 @@ export function getGraphData(graphId) {
 }
 
 /**
- * 获取项目信息
- * @param {String} projectId - 项目ID
+ * Get project information
+ * @param {String} projectId - Project ID
  * @returns {Promise}
  */
 export function getProject(projectId) {
