@@ -1,0 +1,15 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -f
+      - Dockerfile.cloudrun
+      - --build-arg
+      - VITE_API_BASE_URL=${_VITE_API_BASE_URL}
+      - -t
+      - us-central1-docker.pkg.dev/$PROJECT_ID/byteeit/frontend
+      - .
+images:
+  - us-central1-docker.pkg.dev/$PROJECT_ID/byteeit/frontend
+substitutions:
+  _VITE_API_BASE_URL: ''
