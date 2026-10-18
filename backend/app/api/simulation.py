@@ -21,7 +21,7 @@ logger = get_logger('mirofish.api.simulation')
 
 # Interview prompt 优化前缀
 # 添加此前缀可以避免Agent调用工具，直接用文本回复
-INTERVIEW_PROMPT_PREFIX = "结合你的人设、所有的过往记忆与行动，不调用任何工具直接用文本回复我："
+INTERVIEW_PROMPT_PREFIX = "Drawing on your persona and all of your past memories and actions, reply to me directly in plain text without calling any tools: "
 
 
 def optimize_interview_prompt(prompt: str) -> str:

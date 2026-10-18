@@ -77,12 +77,12 @@ def delete_project(project_id: str):
     if not success:
         return jsonify({
             "success": False,
-            "error": f"项目不存在或删除失败: {project_id}"
+            "error": f"Project not found or failed to delete: {project_id}"
         }), 404
-    
+
     return jsonify({
         "success": True,
-        "message": f"项目已删除: {project_id}"
+        "message": f"Project deleted: {project_id}"
     })
 
 
@@ -96,9 +96,9 @@ def reset_project(project_id: str):
     if not project:
         return jsonify({
             "success": False,
-            "error": f"项目不存在: {project_id}"
+            "error": f"Project not found: {project_id}"
         }), 404
-    
+
     # 重置到本体已生成状态
     if project.ontology:
         project.status = ProjectStatus.ONTOLOGY_GENERATED
@@ -112,7 +112,7 @@ def reset_project(project_id: str):
     
     return jsonify({
         "success": True,
-        "message": f"项目已重置: {project_id}",
+        "message": f"Project reset: {project_id}",
         "data": project.to_dict()
     })
 
@@ -321,12 +321,12 @@ def build_graph():
         # 检查配置
         errors = []
         if not Config.ZEP_API_KEY:
-            errors.append("ZEP_API_KEY未配置")
+            errors.append("ZEP_API_KEY is not configured")
         if errors:
             logger.error(f"配置错误: {errors}")
             return jsonify({
                 "success": False,
-                "error": "配置错误: " + "; ".join(errors)
+                "error": "Configuration error: " + "; ".join(errors)
             }), 500
         
         # 解析请求
@@ -337,15 +337,15 @@ def build_graph():
         if not project_id:
             return jsonify({
                 "success": False,
-                "error": "请提供 project_id"
+                "error": "Please provide project_id"
             }), 400
-        
+
         # 获取项目
         project = ProjectManager.get_project(project_id)
         if not project:
             return jsonify({
                 "success": False,
-                "error": f"项目不存在: {project_id}"
+                "error": f"Project not found: {project_id}"
             }), 404
         
         # 检查项目状态
@@ -354,13 +354,13 @@ def build_graph():
         if project.status == ProjectStatus.CREATED:
             return jsonify({
                 "success": False,
-                "error": "项目尚未生成本体，请先调用 /ontology/generate"
+                "error": "Project has not generated an ontology yet, please call /ontology/generate first"
             }), 400
-        
+
         if project.status == ProjectStatus.GRAPH_BUILDING and not force:
             return jsonify({
                 "success": False,
-                "error": "图谱正在构建中，请勿重复提交。如需强制重建，请添加 force: true",
+                "error": "Graph is currently being built, please do not resubmit. To force a rebuild, add force: true",
                 "task_id": project.graph_build_task_id
             }), 400
         
@@ -385,20 +385,20 @@ def build_graph():
         if not text:
             return jsonify({
                 "success": False,
-                "error": "未找到提取的文本内容"
+                "error": "Extracted text content not found"
             }), 400
-        
+
         # 获取本体
         ontology = project.ontology
         if not ontology:
             return jsonify({
                 "success": False,
-                "error": "未找到本体定义"
+                "error": "Ontology definition not found"
             }), 400
-        
+
         # 创建异步任务
         task_manager = TaskManager()
-        task_id = task_manager.create_task(f"构建图谱: {graph_name}")
+        task_id = task_manager.create_task(f"Build graph: {graph_name}")
         logger.info(f"创建图谱构建任务: task_id={task_id}, project_id={project_id}")
         
         # 更新项目状态
@@ -414,16 +414,16 @@ def build_graph():
                 task_manager.update_task(
                     task_id, 
                     status=TaskStatus.PROCESSING,
-                    message="初始化图谱构建服务..."
+                    message="Initializing graph build service..."
                 )
-                
+
                 # 创建图谱构建服务
                 builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
-                
+
                 # 分块
                 task_manager.update_task(
                     task_id,
-                    message="文本分块中...",
+                    message="Chunking text...",
                     progress=5
                 )
                 chunks = TextProcessor.split_text(
@@ -436,7 +436,7 @@ def build_graph():
                 # 创建图谱
                 task_manager.update_task(
                     task_id,
-                    message="创建Zep图谱...",
+                    message="Creating Zep graph...",
                     progress=10
                 )
                 graph_id = builder.create_graph(name=graph_name)
@@ -448,7 +448,7 @@ def build_graph():
                 # 设置本体
                 task_manager.update_task(
                     task_id,
-                    message="设置本体定义...",
+                    message="Setting ontology definition...",
                     progress=15
                 )
                 builder.set_ontology(graph_id, ontology)
@@ -464,7 +464,7 @@ def build_graph():
                 
                 task_manager.update_task(
                     task_id,
-                    message=f"开始添加 {total_chunks} 个文本块...",
+                    message=f"Starting to add {total_chunks} text chunks...",
                     progress=15
                 )
                 
@@ -478,7 +478,7 @@ def build_graph():
                 # 等待Zep处理完成（查询每个episode的processed状态）
                 task_manager.update_task(
                     task_id,
-                    message="等待Zep处理数据...",
+                    message="Waiting for Zep to process data...",
                     progress=55
                 )
                 
@@ -495,7 +495,7 @@ def build_graph():
                 # 获取图谱数据
                 task_manager.update_task(
                     task_id,
-                    message="获取图谱数据...",
+                    message="Fetching graph data...",
                     progress=95
                 )
                 graph_data = builder.get_graph_data(graph_id)
@@ -512,7 +512,7 @@ def build_graph():
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.COMPLETED,
-                    message="图谱构建完成",
+                    message="Graph build complete",
                     progress=100,
                     result={
                         "project_id": project_id,
@@ -535,7 +535,7 @@ def build_graph():
                 task_manager.update_task(
                     task_id,
                     status=TaskStatus.FAILED,
-                    message=f"构建失败: {str(e)}",
+                    message=f"Build failed: {str(e)}",
                     error=traceback.format_exc()
                 )
         
@@ -548,7 +548,7 @@ def build_graph():
             "data": {
                 "project_id": project_id,
                 "task_id": task_id,
-                "message": "图谱构建任务已启动，请通过 /task/{task_id} 查询进度"
+                "message": "Graph build task started, check progress via /task/{task_id}"
             }
         })
         
@@ -572,7 +572,7 @@ def get_task(task_id: str):
     if not task:
         return jsonify({
             "success": False,
-            "error": f"任务不存在: {task_id}"
+            "error": f"Task not found: {task_id}"
         }), 404
     
     return jsonify({
@@ -606,7 +606,7 @@ def get_graph_data(graph_id: str):
         if not Config.ZEP_API_KEY:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "ZEP_API_KEY is not configured"
             }), 500
         
         builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
@@ -634,7 +634,7 @@ def delete_graph(graph_id: str):
         if not Config.ZEP_API_KEY:
             return jsonify({
                 "success": False,
-                "error": "ZEP_API_KEY未配置"
+                "error": "ZEP_API_KEY is not configured"
             }), 500
         
         builder = GraphBuilderService(api_key=Config.ZEP_API_KEY)
@@ -642,7 +642,7 @@ def delete_graph(graph_id: str):
         
         return jsonify({
             "success": True,
-            "message": f"图谱已删除: {graph_id}"
+            "message": f"Graph deleted: {graph_id}"
         })
         
     except Exception as e:

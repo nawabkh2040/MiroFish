@@ -1577,30 +1577,30 @@ class ZepToolsService:
             }
             agent_summaries.append(summary)
         
-        system_prompt = """你是一个专业的采访策划专家。你的任务是根据采访需求，从模拟Agent列表中选择最适合采访的对象。
+        system_prompt = """You are a professional interview planning expert. Your task is to select the most suitable interview subjects from a list of simulated Agents based on the interview requirement.
 
-选择标准：
-1. Agent的身份/职业与采访主题相关
-2. Agent可能持有独特或有价值的观点
-3. 选择多样化的视角（如：支持方、反对方、中立方、专业人士等）
-4. 优先选择与事件直接相关的角色
+Selection criteria:
+1. The Agent's identity/profession is relevant to the interview topic
+2. The Agent may hold unique or valuable opinions
+3. Select a diverse range of perspectives (e.g., supporters, opponents, neutral parties, professionals, etc.)
+4. Prioritize roles directly related to the event
 
-返回JSON格式：
+Return in JSON format:
 {
-    "selected_indices": [选中Agent的索引列表],
-    "reasoning": "选择理由说明"
+    "selected_indices": [list of selected Agent indices],
+    "reasoning": "explanation of the selection rationale"
 }"""
 
-        user_prompt = f"""采访需求：
+        user_prompt = f"""Interview requirement:
 {interview_requirement}
 
-模拟背景：
-{simulation_requirement if simulation_requirement else "未提供"}
+Simulation background:
+{simulation_requirement if simulation_requirement else "Not provided"}
 
-可选择的Agent列表（共{len(agent_summaries)}个）：
+List of available Agents (total: {len(agent_summaries)}):
 {json.dumps(agent_summaries, ensure_ascii=False, indent=2)}
 
-请选择最多{max_agents}个最适合采访的Agent，并说明选择理由。"""
+Please select up to {max_agents} of the most suitable Agents to interview, and explain your reasoning."""
 
         try:
             response = self.llm.chat_json(
@@ -1612,7 +1612,7 @@ class ZepToolsService:
             )
             
             selected_indices = response.get("selected_indices", [])[:max_agents]
-            reasoning = response.get("reasoning", "基于相关性自动选择")
+            reasoning = response.get("reasoning", "Automatically selected by relevance")
             
             # 获取选中的Agent完整信息
             selected_agents = []
@@ -1629,7 +1629,7 @@ class ZepToolsService:
             # 降级：选择前N个
             selected = profiles[:max_agents]
             indices = list(range(min(max_agents, len(profiles))))
-            return selected, indices, "使用默认选择策略"
+            return selected, indices, "Used default selection strategy"
     
     def _generate_interview_questions(
         self,
@@ -1641,25 +1641,25 @@ class ZepToolsService:
         
         agent_roles = [a.get("profession", "未知") for a in selected_agents]
         
-        system_prompt = """你是一个专业的记者/采访者。根据采访需求，生成3-5个深度采访问题。
+        system_prompt = """You are a professional journalist/interviewer. Based on the interview requirement, generate 3-5 in-depth interview questions.
 
-问题要求：
-1. 开放性问题，鼓励详细回答
-2. 针对不同角色可能有不同答案
-3. 涵盖事实、观点、感受等多个维度
-4. 语言自然，像真实采访一样
-5. 每个问题控制在50字以内，简洁明了
-6. 直接提问，不要包含背景说明或前缀
+Question requirements:
+1. Open-ended questions that encourage detailed answers
+2. Different roles may have different answers to the same question
+3. Cover multiple dimensions such as facts, opinions, and feelings
+4. Natural language, like a real interview
+5. Keep each question concise, within about 50 characters
+6. Ask directly, without any background explanation or prefix
 
-返回JSON格式：{"questions": ["问题1", "问题2", ...]}"""
+Return in JSON format: {"questions": ["question1", "question2", ...]}"""
 
-        user_prompt = f"""采访需求：{interview_requirement}
+        user_prompt = f"""Interview requirement: {interview_requirement}
 
-模拟背景：{simulation_requirement if simulation_requirement else "未提供"}
+Simulation background: {simulation_requirement if simulation_requirement else "Not provided"}
 
-采访对象角色：{', '.join(agent_roles)}
+Roles of the interview subjects: {', '.join(agent_roles)}
 
-请生成3-5个采访问题。"""
+Please generate 3-5 interview questions."""
 
         try:
             response = self.llm.chat_json(
@@ -1669,15 +1669,15 @@ class ZepToolsService:
                 ],
                 temperature=0.5
             )
-            
-            return response.get("questions", [f"关于{interview_requirement}，您有什么看法？"])
-            
+
+            return response.get("questions", [f"What's your view on {interview_requirement}?"])
+
         except Exception as e:
             logger.warning(f"生成采访问题失败: {e}")
             return [
-                f"关于{interview_requirement}，您的观点是什么？",
-                "这件事对您或您所代表的群体有什么影响？",
-                "您认为应该如何解决或改进这个问题？"
+                f"What's your view on {interview_requirement}?",
+                "How has this affected you or the group you represent?",
+                "How do you think this issue should be addressed or improved?"
             ]
     
     def _generate_interview_summary(
@@ -1688,35 +1688,35 @@ class ZepToolsService:
         """生成采访摘要"""
         
         if not interviews:
-            return "未完成任何采访"
+            return "No interviews were completed"
         
         # 收集所有采访内容
         interview_texts = []
         for interview in interviews:
             interview_texts.append(f"【{interview.agent_name}（{interview.agent_role}）】\n{interview.response[:500]}")
         
-        system_prompt = """你是一个专业的新闻编辑。请根据多位受访者的回答，生成一份采访摘要。
+        system_prompt = """You are a professional news editor. Based on the responses from multiple interviewees, generate an interview summary.
 
-摘要要求：
-1. 提炼各方主要观点
-2. 指出观点的共识和分歧
-3. 突出有价值的引言
-4. 客观中立，不偏袒任何一方
-5. 控制在1000字内
+Summary requirements:
+1. Distill the main viewpoints of each party
+2. Point out areas of consensus and disagreement among the viewpoints
+3. Highlight valuable quotes
+4. Remain objective and neutral, without favoring any side
+5. Keep it within about 1000 characters
 
-格式约束（必须遵守）：
-- 使用纯文本段落，用空行分隔不同部分
-- 不要使用Markdown标题（如#、##、###）
-- 不要使用分割线（如---、***）
-- 引用受访者原话时使用中文引号「」
-- 可以使用**加粗**标记关键词，但不要使用其他Markdown语法"""
+Formatting constraints (must be followed):
+- Use plain text paragraphs, separated by blank lines between sections
+- Do not use Markdown headers (such as #, ##, ###)
+- Do not use horizontal rules (such as ---, ***)
+- When quoting an interviewee's exact words, use standard double quotation marks " "
+- You may use **bold** to mark key terms, but do not use any other Markdown syntax"""
 
-        user_prompt = f"""采访主题：{interview_requirement}
+        user_prompt = f"""Interview topic: {interview_requirement}
 
-采访内容：
+Interview content:
 {"".join(interview_texts)}
 
-请生成采访摘要。"""
+Please generate the interview summary."""
 
         try:
             summary = self.llm.chat(

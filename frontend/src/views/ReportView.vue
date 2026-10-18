@@ -183,10 +183,10 @@ const loadGraph = async (graphId) => {
     const res = await getGraphData(graphId)
     if (res.success) {
       graphData.value = res.data
-      addLog('图谱数据加载成功')
+      addLog('Graph data loaded successfully')
     }
   } catch (err) {
-    addLog(`图谱加载失败: ${err.message}`)
+    addLog(`Failed to load graph: ${err.message}`)
   } finally {
     graphLoading.value = false
   }
@@ -207,7 +207,7 @@ watch(() => route.params.reportId, (newId) => {
 }, { immediate: true })
 
 onMounted(() => {
-  addLog('ReportView 初始化')
+  addLog('ReportView initialized')
   loadReportData()
 })
 </script>

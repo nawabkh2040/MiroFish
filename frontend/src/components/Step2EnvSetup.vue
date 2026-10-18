@@ -17,7 +17,7 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/create</p>
           <p class="description">
-            新建simulation实例，拉取模拟世界参数模版
+            Create a new simulation instance and pull the simulated-world parameter template
           </p>
 
           <div v-if="simulationId" class="info-card">
@@ -35,7 +35,7 @@
             </div>
             <div class="info-row">
               <span class="info-label">Task ID</span>
-              <span class="info-value mono">{{ taskId || '异步任务已完成' }}</span>
+              <span class="info-value mono">{{ taskId || 'Async task completed' }}</span>
             </div>
           </div>
         </div>
@@ -69,7 +69,7 @@
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ expectedTotal || '-' }}</span>
-              <span class="stat-label">预期Agent总数</span>
+              <span class="stat-label">Expected total agent count</span>
             </div>
             <div class="stat-card">
               <span class="stat-value">{{ totalTopicsCount }}</span>
@@ -130,7 +130,7 @@
         <div class="card-content">
           <p class="api-note">POST /api/simulation/prepare</p>
           <p class="description">
-            LLM 根据模拟需求与现实种子，智能设置世界时间流速、推荐算法、每个个体的活跃时间段、发言频率、事件触发等参数
+            Based on the simulation requirements and reality seeds, the LLM intelligently sets parameters such as world time flow rate, recommendation algorithm, each individual's active hours, posting frequency, and event triggers
           </p>
           
           <!-- Config Preview -->
@@ -139,30 +139,30 @@
             <div class="config-block">
               <div class="config-grid">
                 <div class="config-item">
-                  <span class="config-item-label">模拟时长</span>
-                  <span class="config-item-value">{{ simulationConfig.time_config?.total_simulation_hours || '-' }} 小时</span>
+                  <span class="config-item-label">Simulation duration</span>
+                  <span class="config-item-value">{{ simulationConfig.time_config?.total_simulation_hours || '-' }} hours</span>
                 </div>
                 <div class="config-item">
-                  <span class="config-item-label">每轮时长</span>
-                  <span class="config-item-value">{{ simulationConfig.time_config?.minutes_per_round || '-' }} 分钟</span>
+                  <span class="config-item-label">Minutes per round</span>
+                  <span class="config-item-value">{{ simulationConfig.time_config?.minutes_per_round || '-' }} min</span>
                 </div>
                 <div class="config-item">
                   <span class="config-item-label">Total Rounds</span>
                   <span class="config-item-value">{{ Math.floor((simulationConfig.time_config?.total_simulation_hours * 60 / simulationConfig.time_config?.minutes_per_round)) || '-' }} rounds</span>
                 </div>
                 <div class="config-item">
-                  <span class="config-item-label">每小时活跃</span>
+                  <span class="config-item-label">Active per hour</span>
                   <span class="config-item-value">{{ simulationConfig.time_config?.agents_per_hour_min }}-{{ simulationConfig.time_config?.agents_per_hour_max }}</span>
                 </div>
               </div>
               <div class="time-periods">
                 <div class="period-item">
-                  <span class="period-label">高峰时段</span>
+                  <span class="period-label">Peak hours</span>
                   <span class="period-hours">{{ simulationConfig.time_config?.peak_hours?.join(':00, ') }}:00</span>
                   <span class="period-multiplier">×{{ simulationConfig.time_config?.peak_activity_multiplier }}</span>
                 </div>
                 <div class="period-item">
-                  <span class="period-label">工作时段</span>
+                  <span class="period-label">Work hours</span>
                   <span class="period-hours">{{ simulationConfig.time_config?.work_hours?.[0] }}:00-{{ simulationConfig.time_config?.work_hours?.slice(-1)[0] }}:00</span>
                   <span class="period-multiplier">×{{ simulationConfig.time_config?.work_activity_multiplier }}</span>
                 </div>
