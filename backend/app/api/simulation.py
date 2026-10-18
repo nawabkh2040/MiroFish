@@ -259,7 +259,7 @@ def _check_simulation_prepared(simulation_id: str) -> tuple:
     
     # 检查目录是否存在
     if not os.path.exists(simulation_dir):
-        return False, {"reason": "模拟目录不存在"}
+        return False, {"reason": "Simulation directory does not exist"}
     
     # 必要文件列表（不包括脚本，脚本位于 backend/scripts/）
     required_files = [
@@ -281,7 +281,7 @@ def _check_simulation_prepared(simulation_id: str) -> tuple:
     
     if missing_files:
         return False, {
-            "reason": "缺少必要文件",
+            "reason": "Missing required files",
             "missing_files": missing_files,
             "existing_files": existing_files
         }

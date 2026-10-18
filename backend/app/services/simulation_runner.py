@@ -1122,7 +1122,7 @@ class SimulationRunner:
         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
         
         if not os.path.exists(sim_dir):
-            return {"success": True, "message": "模拟目录不存在，无需清理"}
+            return {"success": True, "message": "Simulation directory does not exist, nothing to clean up"}
         
         cleaned_files = []
         errors = []
@@ -1629,7 +1629,7 @@ class SimulationRunner:
         if not ipc_client.check_env_alive():
             return {
                 "success": True,
-                "message": "环境已经关闭"
+                "message": "Environment is already closed"
             }
         
         logger.info(f"发送关闭环境命令: simulation_id={simulation_id}")
@@ -1639,7 +1639,7 @@ class SimulationRunner:
             
             return {
                 "success": response.status.value == "completed",
-                "message": "环境关闭命令已发送",
+                "message": "Environment close command sent",
                 "result": response.result,
                 "timestamp": response.timestamp
             }
@@ -1647,7 +1647,7 @@ class SimulationRunner:
             # 超时可能是因为环境正在关闭
             return {
                 "success": True,
-                "message": "环境关闭命令已发送（等待响应超时，环境可能正在关闭）"
+                "message": "Environment close command sent (timed out waiting for a response; the environment may still be closing)"
             }
     
     @classmethod
