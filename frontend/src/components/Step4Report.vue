@@ -10,6 +10,10 @@
             <div class="report-meta">
               <span class="report-tag">Prediction Report</span>
               <span class="report-id">ID: {{ reportId || 'REF-2024-X92' }}</span>
+              <span class="download-links">
+                <a v-if="downloadMdUrl" :href="downloadMdUrl" class="download-link" download>↓ Markdown</a>
+                <a v-if="downloadPdfUrl" :href="downloadPdfUrl" class="download-link" download>↓ PDF</a>
+              </span>
             </div>
             <h1 class="main-title">{{ reportOutline.title }}</h1>
             <p class="sub-title">{{ reportOutline.summary }}</p>
@@ -2391,6 +2395,28 @@ watch(() => props.reportId, (newId) => {
   color: #9CA3AF;
   font-weight: 500;
   letter-spacing: 0.02em;
+}
+
+.download-links {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.download-link {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #111827;
+  text-decoration: none;
+  border: 1px solid #111827;
+  padding: 3px 8px;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.download-link:hover {
+  background: #111827;
+  color: #FFFFFF;
 }
 
 .main-title {
