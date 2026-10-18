@@ -393,6 +393,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick, h, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAgentLog, getConsoleLog } from '../api/report'
+import { API_BASE_URL } from '../api/index'
 
 const router = useRouter()
 
@@ -401,6 +402,14 @@ const props = defineProps({
   simulationId: String,
   systemLogs: Array
 })
+
+// Branded report download links (Markdown / PDF, logo + "byteeIT Simulation Engine" + topic)
+const downloadMdUrl = computed(() =>
+  props.reportId ? `${API_BASE_URL}/api/report/${props.reportId}/download?format=md` : null
+)
+const downloadPdfUrl = computed(() =>
+  props.reportId ? `${API_BASE_URL}/api/report/${props.reportId}/download?format=pdf` : null
+)
 
 const emit = defineEmits(['add-log', 'update-status'])
 

@@ -1,8 +1,11 @@
 import axios from 'axios'
 
+// Exposed for direct links (e.g. file downloads) that bypass the axios instance below.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001'
+
 // Create axios instance
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001',
+  baseURL: API_BASE_URL,
   timeout: 300000, // 5 minute timeout (ontology generation may take longer)
   headers: {
     'Content-Type': 'application/json'

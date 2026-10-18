@@ -719,9 +719,9 @@ const sendToAgent = async (message) => {
     const historyContext = chatHistory.value
       .filter(msg => msg.content !== message)
       .slice(-6)
-      .map(msg => `${msg.role === 'user' ? '提问者' : '你'}：${msg.content}`)
+      .map(msg => `${msg.role === 'user' ? 'Interviewer' : 'You'}: ${msg.content}`)
       .join('\n')
-    prompt = `以下是我们之前的对话：\n${historyContext}\n\n现在我的新问题是：${message}`
+    prompt = `Here is our previous conversation:\n${historyContext}\n\nMy new question now is: ${message}`
   }
   
   const res = await interviewAgents({
@@ -935,7 +935,7 @@ const handleClickOutside = (e) => {
 
 // Lifecycle
 onMounted(() => {
-  addLog('Step5 深度互动初始化')
+  addLog('Step5 deep interaction initialized')
   loadReportData()
   loadProfiles()
   document.addEventListener('click', handleClickOutside)

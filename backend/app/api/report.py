@@ -390,45 +390,109 @@ def list_reports():
         }), 500
 
 
+_LOGO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'byteeITLogo.png')
+
+
+def _report_topic(report) -> str:
+    if report.outline and report.outline.title:
+        return report.outline.title
+    return report.simulation_requirement or "Untitled Simulation"
+
+
+def _build_branded_markdown(report) -> str:
+    """Prepend a byteeIT-branded header to the report's Markdown content."""
+    topic = _report_topic(report)
+    generated = report.completed_at or report.created_at or ""
+    header = (
+        "# byteeIT Simulation Engine\n\n"
+        f"**Topic:** {topic}\n\n"
+        f"**Generated:** {generated}\n\n"
+        "---\n\n"
+    )
+    return header + (report.markdown_content or "")
+
+
+def _build_branded_pdf(report) -> bytes:
+    """Render the report to a byteeIT-branded PDF (logo, engine name, topic)."""
+    import base64
+    import io
+    import markdown as md_lib
+    from xhtml2pdf import pisa
+
+    with open(_LOGO_PATH, 'rb') as f:
+        logo_b64 = base64.b64encode(f.read()).decode()
+
+    topic = _report_topic(report)
+    generated = report.completed_at or report.created_at or ""
+    body_html = md_lib.markdown(report.markdown_content or "", extensions=['tables', 'fenced_code'])
+
+    html = f"""<html><head><style>
+        body {{ font-family: Helvetica, Arial, sans-serif; font-size: 11pt; color: #1a1a1a; }}
+        .header {{ border-bottom: 2px solid #000000; padding-bottom: 12px; margin-bottom: 24px; }}
+        .logo {{ height: 28px; }}
+        .engine-line {{ font-size: 9pt; color: #555555; margin-top: 8px; }}
+        .topic {{ font-size: 18pt; font-weight: bold; margin-top: 8px; }}
+        h1 {{ font-size: 16pt; }}
+        h2 {{ font-size: 14pt; border-bottom: 1px solid #dddddd; padding-bottom: 4px; }}
+        h3 {{ font-size: 12pt; }}
+        blockquote {{ border-left: 3px solid #cccccc; margin-left: 0; padding-left: 12px; color: #444444; }}
+        code {{ background-color: #f4f4f4; padding: 1px 4px; }}
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid #dddddd; padding: 6px 8px; font-size: 10pt; }}
+    </style></head><body>
+        <div class="header">
+            <img class="logo" src="data:image/png;base64,{logo_b64}" />
+            <div class="engine-line">Engine: byteeIT Simulation Engine &middot; Generated: {generated}</div>
+            <div class="topic">{topic}</div>
+        </div>
+        {body_html}
+    </body></html>"""
+
+    buf = io.BytesIO()
+    pisa.CreatePDF(html, dest=buf)
+    return buf.getvalue()
+
+
 @report_bp.route('/<report_id>/download', methods=['GET'])
 def download_report(report_id: str):
     """
-    下载报告（Markdown格式）
-    
-    返回Markdown文件
+    Download a byteeIT-branded report.
+
+    Query params:
+        format: "md" (default) or "pdf"
     """
     try:
         report = ReportManager.get_report(report_id)
-        
+
         if not report:
             return jsonify({
                 "success": False,
                 "error": f"Report not found: {report_id}"
             }), 404
-        
-        md_path = ReportManager._get_report_markdown_path(report_id)
-        
-        if not os.path.exists(md_path):
-            # 如果MD文件不存在，生成一个临时文件
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
-                f.write(report.markdown_content)
-                temp_path = f.name
-            
+
+        fmt = request.args.get('format', 'md').lower()
+
+        if fmt == 'pdf':
+            import io
+            pdf_bytes = _build_branded_pdf(report)
             return send_file(
-                temp_path,
+                io.BytesIO(pdf_bytes),
                 as_attachment=True,
-                download_name=f"{report_id}.md"
+                download_name=f"{report_id}.pdf",
+                mimetype='application/pdf'
             )
-        
+
+        import io
+        branded_md = _build_branded_markdown(report)
         return send_file(
-            md_path,
+            io.BytesIO(branded_md.encode('utf-8')),
             as_attachment=True,
-            download_name=f"{report_id}.md"
+            download_name=f"{report_id}.md",
+            mimetype='text/markdown'
         )
-        
+
     except Exception as e:
-        logger.error(f"下载报告失败: {str(e)}")
+        logger.error(f"Failed to download report: {str(e)}")
         return jsonify({
             "success": False,
             "error": str(e),

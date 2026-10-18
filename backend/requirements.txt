@@ -8,6 +8,13 @@
 # ============= 核心框架 =============
 flask>=3.0.0
 flask-cors>=6.0.0
+# 生产环境 WSGI 服务器
+gunicorn>=23.0.0
+
+# ============= 报告导出 =============
+# Markdown -> HTML -> PDF，附带 byteeIT 品牌页眉
+markdown>=3.7
+xhtml2pdf>=0.2.16
 
 # ============= LLM 相关 =============
 # OpenAI SDK（统一使用 OpenAI 格式调用 LLM，包括通过 Gemini 的 OpenAI 兼容端点）
