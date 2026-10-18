@@ -428,8 +428,8 @@ class SimulationManager:
             
             if progress_callback:
                 progress_callback(
-                    "generating_config", 100, 
-                    "配置生成完成",
+                    "generating_config", 100,
+                    "Configuration generation complete",
                     current=3,
                     total=3
                 )

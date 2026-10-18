@@ -793,35 +793,35 @@ Please begin:
 # ── ReACT 循环内消息模板 ──
 
 REACT_OBSERVATION_TEMPLATE = """\
-Observation（检索结果）:
+Observation (retrieval result):
 
-═══ 工具 {tool_name} 返回 ═══
+═══ Tool {tool_name} returned ═══
 {result}
 
 ═══════════════════════════════════════════════════════════════
-已调用工具 {tool_calls_count}/{max_tool_calls} 次（已用: {used_tools_str}）{unused_hint}
-- 如果信息充分：以 "Final Answer:" 开头输出章节内容（必须引用上述原文）
-- 如果需要更多信息：调用一个工具继续检索
+Tools called {tool_calls_count}/{max_tool_calls} times (used: {used_tools_str}){unused_hint}
+- If the information is sufficient: output the section content starting with "Final Answer:" (must cite the source text above)
+- If more information is needed: call one tool to continue retrieving
 ═══════════════════════════════════════════════════════════════"""
 
 REACT_INSUFFICIENT_TOOLS_MSG = (
-    "【注意】你只调用了{tool_calls_count}次工具，至少需要{min_tool_calls}次。"
-    "请再调用工具获取更多模拟数据，然后再输出 Final Answer。{unused_hint}"
+    "[Note] You have only called tools {tool_calls_count} time(s); at least {min_tool_calls} are required. "
+    "Please call tools again to gather more simulation data before outputting a Final Answer. {unused_hint}"
 )
 
 REACT_INSUFFICIENT_TOOLS_MSG_ALT = (
-    "当前只调用了 {tool_calls_count} 次工具，至少需要 {min_tool_calls} 次。"
-    "请调用工具获取模拟数据。{unused_hint}"
+    "Only {tool_calls_count} tool call(s) have been made so far; at least {min_tool_calls} are required. "
+    "Please call a tool to gather simulation data. {unused_hint}"
 )
 
 REACT_TOOL_LIMIT_MSG = (
-    "工具调用次数已达上限（{tool_calls_count}/{max_tool_calls}），不能再调用工具。"
-    '请立即基于已获取的信息，以 "Final Answer:" 开头输出章节内容。'
+    "The tool-call limit has been reached ({tool_calls_count}/{max_tool_calls}); no further tool calls are allowed. "
+    'Based on the information already gathered, output the section content immediately, starting with "Final Answer:".'
 )
 
-REACT_UNUSED_TOOLS_HINT = "\n💡 你还没有使用过: {unused_list}，建议尝试不同工具获取多角度信息"
+REACT_UNUSED_TOOLS_HINT = "\n💡 You haven't used: {unused_list} yet — consider trying different tools for a multi-angle view"
 
-REACT_FORCE_FINAL_MSG = "已达到工具调用限制，请直接输出 Final Answer: 并生成章节内容。"
+REACT_FORCE_FINAL_MSG = "The tool-call limit has been reached. Output \"Final Answer:\" directly and generate the section content."
 
 # ── Chat prompt ──
 
@@ -853,7 +853,7 @@ Prediction condition: {simulation_requirement}
 - Use > formatting to quote key content
 - Give the conclusion first, then explain the reasoning"""
 
-CHAT_OBSERVATION_SUFFIX = "\n\n请简洁回答问题。"
+CHAT_OBSERVATION_SUFFIX = "\n\nPlease answer the question concisely."
 
 
 # ═══════════════════════════════════════════════════════════════

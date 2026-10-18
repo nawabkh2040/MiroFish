@@ -800,9 +800,9 @@ const startPrepareSimulation = async () => {
       // 立即设置预期Agent总数（从prepare接口返回值获取）
       if (res.data.expected_entities_count) {
         expectedTotal.value = res.data.expected_entities_count
-        addLog(`从Zep图谱读取到 ${res.data.expected_entities_count} 个实体`)
+        addLog(`Read ${res.data.expected_entities_count} entities from Zep graph`)
         if (res.data.entity_types && res.data.entity_types.length > 0) {
-          addLog(`  └─ 实体类型: ${res.data.entity_types.join(', ')}`)
+          addLog(`  └─ Entity types: ${res.data.entity_types.join(', ')}`)
         }
       }
       
@@ -812,11 +812,11 @@ const startPrepareSimulation = async () => {
       // 开始实时获取 Profiles
       startProfilesPolling()
     } else {
-      addLog(`准备失败: ${res.error || '未知错误'}`)
+      addLog(`Preparation failed: ${res.error || 'Unknown error'}`)
       emit('update-status', 'error')
     }
   } catch (err) {
-    addLog(`准备异常: ${err.message}`)
+    addLog(`Preparation exception: ${err.message}`)
     emit('update-status', 'error')
   }
 }
@@ -890,12 +890,12 @@ const pollPrepareStatus = async () => {
       
       // 检查是否完成
       if (data.status === 'completed' || data.status === 'ready' || data.already_prepared) {
-        addLog('✓ 准备工作已完成')
+        addLog('✓ Preparation completed')
         stopPolling()
         stopProfilesPolling()
         await loadPreparedData()
       } else if (data.status === 'failed') {
-        addLog(`✗ 准备失败: ${data.error || '未知错误'}`)
+        addLog(`✗ Preparation failed: ${data.error || 'Unknown error'}`)
         stopPolling()
         stopProfilesPolling()
       }
@@ -936,11 +936,11 @@ const fetchProfilesRealtime = async () => {
         if (currentCount === 1) {
           addLog(`Starting Agent persona generation...`)
         }
-        addLog(`→ Agent人设 ${currentCount}/${total}: ${profileName} (${latestProfile?.profession || '未知职业'})`)
-        
+        addLog(`→ Agent persona ${currentCount}/${total}: ${profileName} (${latestProfile?.profession || 'Unknown profession'})`)
+
         // 如果全部生成完成
         if (expectedTotal.value && currentCount >= expectedTotal.value) {
-          addLog(`✓ 全部 ${currentCount} 个Agent人设生成完成`)
+          addLog(`✓ All ${currentCount} Agent personas generated`)
         }
       }
     }
@@ -983,15 +983,15 @@ const fetchConfigRealtime = async () => {
       // 如果配置已生成
       if (data.config_generated && data.config) {
         simulationConfig.value = data.config
-        addLog('✓ 模拟配置生成完成')
-        
+        addLog('✓ Simulation configuration generated')
+
         // 显示详细配置摘要
         if (data.summary) {
-          addLog(`  ├─ Agent数量: ${data.summary.total_agents}个`)
-          addLog(`  ├─ 模拟时长: ${data.summary.simulation_hours}小时`)
-          addLog(`  ├─ 初始帖子: ${data.summary.initial_posts_count}条`)
-          addLog(`  ├─ 热点话题: ${data.summary.hot_topics_count}个`)
-          addLog(`  └─ 平台配置: Twitter ${data.summary.has_twitter_config ? '✓' : '✗'}, Reddit ${data.summary.has_reddit_config ? '✓' : '✗'}`)
+          addLog(`  ├─ Agent count: ${data.summary.total_agents}`)
+          addLog(`  ├─ Simulation duration: ${data.summary.simulation_hours} hours`)
+          addLog(`  ├─ Initial posts: ${data.summary.initial_posts_count}`)
+          addLog(`  ├─ Hot topics: ${data.summary.hot_topics_count}`)
+          addLog(`  └─ Platform config: Twitter ${data.summary.has_twitter_config ? '✓' : '✗'}, Reddit ${data.summary.has_reddit_config ? '✓' : '✗'}`)
         }
         
         // 显示时间配置详情
@@ -1008,7 +1008,7 @@ const fetchConfigRealtime = async () => {
         
         stopConfigPolling()
         phase.value = 4
-        addLog('✓ 环境搭建完成，可以开始模拟')
+        addLog('✓ Environment setup complete, ready to start simulation')
         emit('update-status', 'completed')
       }
     }
@@ -1019,11 +1019,11 @@ const fetchConfigRealtime = async () => {
 
 const loadPreparedData = async () => {
   phase.value = 2
-  addLog('正在加载已有配置数据...')
+  addLog('Loading existing configuration data...')
 
   // 最后获取一次 Profiles
   await fetchProfilesRealtime()
-  addLog(`已加载 ${profiles.value.length} 个Agent人设`)
+  addLog(`Loaded ${profiles.value.length} Agent personas`)
 
   // 获取配置（使用实时接口）
   try {
@@ -1035,22 +1035,22 @@ const loadPreparedData = async () => {
         
         // 显示详细配置摘要
         if (res.data.summary) {
-          addLog(`  ├─ Agent数量: ${res.data.summary.total_agents}个`)
-          addLog(`  ├─ 模拟时长: ${res.data.summary.simulation_hours}小时`)
-          addLog(`  └─ 初始帖子: ${res.data.summary.initial_posts_count}条`)
+          addLog(`  ├─ Agent count: ${res.data.summary.total_agents}`)
+          addLog(`  ├─ Simulation duration: ${res.data.summary.simulation_hours} hours`)
+          addLog(`  └─ Initial posts: ${res.data.summary.initial_posts_count}`)
         }
-        
-        addLog('✓ 环境搭建完成，可以开始模拟')
+
+        addLog('✓ Environment setup complete, ready to start simulation')
         phase.value = 4
         emit('update-status', 'completed')
       } else {
         // 配置尚未生成，开始轮询
-        addLog('配置生成中，开始轮询等待...')
+        addLog('Configuration still generating, starting polling wait...')
         startConfigPolling()
       }
     }
   } catch (err) {
-    addLog(`加载配置失败: ${err.message}`)
+    addLog(`Failed to load configuration: ${err.message}`)
     emit('update-status', 'error')
   }
 }
@@ -1068,7 +1068,7 @@ watch(() => props.systemLogs?.length, () => {
 onMounted(() => {
   // 自动开始准备流程
   if (props.simulationId) {
-    addLog('Step2 环境搭建初始化')
+    addLog('Step2 environment setup initialized')
     startPrepareSimulation()
   }
 })

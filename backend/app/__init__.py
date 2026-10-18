@@ -72,7 +72,7 @@ def create_app(config_class=Config):
     # 健康检查
     @app.route('/health')
     def health():
-        return {'status': 'ok', 'service': 'MiroFish Backend'}
+        return {'status': 'ok', 'service': 'byteeIT Backend'}
     
     if should_log_startup:
         logger.info("MiroFish Backend 启动完成")
