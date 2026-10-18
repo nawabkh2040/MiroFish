@@ -1,8 +1,9 @@
 """LLM client abstraction.
 
-Supports OpenAI-compatible models by default and can optionally
-use Gemini when LLM_PROVIDER=gemini is configured in the
-environment (see Config).
+Talks to any OpenAI-compatible chat completions endpoint. Gemini is
+supported through Google's official OpenAI-compatible endpoint
+(LLM_PROVIDER=gemini, see Config for the base URL and default model),
+so no Gemini-specific SDK or code path is required.
 """
 
 import json
@@ -15,8 +16,8 @@ from ..config import Config
 
 
 class LLMClient:
-    """LLM Client - Supports both OpenAI and Gemini providers"""
-    
+    """LLM Client - talks to any OpenAI-compatible endpoint (OpenAI, Gemini, etc.)"""
+
     def __init__(
         self,
         api_key: Optional[str] = None,
@@ -25,12 +26,12 @@ class LLMClient:
     ):
         """
         Initialize LLM Client
-        
+
         Args:
             api_key: API key for the LLM provider
             base_url: Base URL for OpenAI-compatible endpoints
             model: Model name to use
-            
+
         Raises:
             ValueError: If LLM_API_KEY is not configured
         """
@@ -42,27 +43,10 @@ class LLMClient:
         if not self.api_key:
             raise ValueError("LLM_API_KEY is not configured")
 
-        # Initialize provider-specific client
-        if self.provider == "gemini":
-            # Lazy import so that environments not using Gemini
-            # don't require the extra dependency at runtime.
-            try:
-                import google.generativeai as genai  # type: ignore
-                genai.configure(api_key=self.api_key)
-                self._gemini = genai
-                self.client = None
-            except ImportError:
-                raise ImportError(
-                    "google-generativeai package required for Gemini support. "
-                    "Install with: pip install google-generativeai"
-                )
-        else:
-            # Default: OpenAI-compatible endpoint
-            self.client = OpenAI(
-                api_key=self.api_key,
-                base_url=self.base_url
-            )
-            self._gemini = None
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url=self.base_url
+        )
     
     def chat(
         self,
@@ -87,15 +71,6 @@ class LLMClient:
             Exception: If LLM API call fails
         """
 
-        if self.provider == "gemini":
-            return self._chat_gemini(
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                response_format=response_format,
-            )
-
-        # Default OpenAI-compatible path
         kwargs = {
             "model": self.model,
             "messages": messages,
@@ -112,57 +87,6 @@ class LLMClient:
         content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
         return content
 
-    def _chat_gemini(
-        self,
-        messages: List[Dict[str, str]],
-        temperature: float,
-        max_tokens: int,
-        response_format: Optional[Dict],
-    ) -> str:
-        """Send chat messages via Gemini.
-
-        This adapts the existing OpenAI-style message list to
-        the google-generativeai Python client.
-        """
-
-        if not self._gemini:
-            raise RuntimeError("Gemini client not initialised")
-
-        # Separate system instruction and conversational turns
-        system_parts = [m["content"] for m in messages if m["role"] == "system"]
-        system_instruction = "\n\n".join(system_parts) if system_parts else None
-
-        contents: List[Dict[str, Any]] = []
-        for m in messages:
-            if m["role"] == "system":
-                continue
-            role = "user" if m["role"] in ("user", "assistant") else "user"
-            contents.append({"role": role, "parts": [m["content"]]})
-
-        generation_config: Dict[str, Any] = {
-            "temperature": temperature,
-            "max_output_tokens": max_tokens,
-        }
-
-        # If the caller requested JSON, set the mime type accordingly
-        if response_format and response_format.get("type") == "json_object":
-            generation_config["response_mime_type"] = "application/json"
-
-        genai = self._gemini
-        if system_instruction:
-            model = genai.GenerativeModel(self.model, system_instruction=system_instruction)
-        else:
-            model = genai.GenerativeModel(self.model)
-
-        response = model.generate_content(
-            contents,
-            generation_config=generation_config,
-        )
-
-        content = response.text or ""
-        content = re.sub(r'<think>[\s\S]*?</think>', '', content).strip()
-        return content
-    
     def chat_json(
         self,
         messages: List[Dict[str, str]],

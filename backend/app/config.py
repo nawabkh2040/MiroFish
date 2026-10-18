@@ -27,11 +27,26 @@ class Config:
     # JSON Configuration - Disable ASCII escaping to display Chinese characters directly
     JSON_AS_ASCII = False
     
-    # LLM Configuration (unified OpenAI format support)
-    LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'openai').lower()
+    # LLM Configuration (unified OpenAI-compatible format support)
+    # Gemini is called through Google's official OpenAI-compatible endpoint,
+    # so no provider-specific SDK or code path is needed.
+    LLM_PROVIDER = os.environ.get('LLM_PROVIDER', 'gemini').lower()
+
+    _LLM_DEFAULT_BASE_URLS = {
+        'openai': 'https://api.openai.com/v1',
+        'gemini': 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    }
+    _LLM_DEFAULT_MODELS = {
+        'openai': 'gpt-4o-mini',
+        # "-latest" aliases always resolve to Google's current cheapest/fastest
+        # model in that tier, so this keeps tracking new Gemini releases
+        # (including the Gemini 3 series) without needing a version bump here.
+        'gemini': 'gemini-flash-lite-latest',
+    }
+
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL') or _LLM_DEFAULT_BASE_URLS.get(LLM_PROVIDER, 'https://api.openai.com/v1')
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME') or _LLM_DEFAULT_MODELS.get(LLM_PROVIDER, 'gpt-4o-mini')
     
     # Zep Configuration (Knowledge Graph Memory Service)
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
