@@ -1,0 +1,24 @@
+# Production image for Google Cloud Run.
+#
+# Differs from the root Dockerfile (which runs the Vite dev server for local
+# docker-compose use) by building a static production bundle and serving it
+# with nginx on Cloud Run's $PORT, rather than running the dev server.
+#
+# VITE_API_BASE_URL must be passed as a build arg pointing at the deployed
+# backend Cloud Run service's URL (frontend/src/api/index.js already reads
+# this at build time; no source change needed).
+
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV PORT=8080
+EXPOSE 8080

@@ -35,6 +35,10 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
 
+    # 报告导出（Markdown -> HTML -> PDF，附带 byteeIT 品牌页眉）
+    "markdown>=3.7",
+    "xhtml2pdf>=0.2.16",
+
     # torch is pulled in transitively (sentence-transformers, via camel-ai) and
     # never used directly for local inference. Listed explicitly here only so
     # the [tool.uv.sources] override below has a direct dependency to attach

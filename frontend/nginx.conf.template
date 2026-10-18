@@ -1,0 +1,17 @@
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Vue Router uses history mode, so any unmatched path falls back to
+    # index.html and lets the client-side router handle it.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = /health {
+        add_header Content-Type text/plain;
+        return 200 "ok";
+    }
+}
