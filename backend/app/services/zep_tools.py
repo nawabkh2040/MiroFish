@@ -1732,4 +1732,4 @@ Please generate the interview summary."""
         except Exception as e:
             logger.warning(f"生成采访摘要失败: {e}")
             # 降级：简单拼接
-            return f"共采访了{len(interviews)}位受访者，包括：" + "、".join([i.agent_name for i in interviews])
+            return f"Interviewed {len(interviews)} respondents, including: " + ", ".join([i.agent_name for i in interviews])

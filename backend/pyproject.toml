@@ -1,38 +1,58 @@
 [project]
-name = "mirofish-backend"
+name = "byteeit-backend"
 version = "0.1.0"
-description = "MiroFish - 简洁通用的群体智能引擎，预测万物"
+description = "byteeIT - A minimal, general-purpose multi-agent engine that predicts anything"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0" }
 authors = [
-    { name = "MiroFish Team" }
+    { name = "byteeIT" }
 ]
 
 dependencies = [
     # 核心框架
     "flask>=3.0.0",
     "flask-cors>=6.0.0",
-    
+    # 生产环境 WSGI 服务器
+    "gunicorn>=23.0.0",
+
     # LLM 相关
     "openai>=1.0.0",
-    
+
     # Zep Cloud
     "zep-cloud==3.13.0",
-    
+
     # OASIS 社交媒体模拟
     "camel-oasis==0.2.5",
     "camel-ai==0.2.78",
-    
+
     # 文件处理
     "PyMuPDF>=1.24.0",
     # 编码检测（支持非UTF-8编码的文本文件）
     "charset-normalizer>=3.0.0",
     "chardet>=5.0.0",
-    
+
     # 工具库
     "python-dotenv>=1.0.0",
     "pydantic>=2.0.0",
 ]
+
+# torch is a transitive dependency (via sentence-transformers, pulled in by
+# camel-ai) that is never actually used for local inference — this app calls
+# Gemini/Zep over the network for everything. Without this, uv resolves the
+# default Linux wheel, which drags in the full nvidia-cu12/CUDA stack
+# (multi-GB) for a GPU that's never used. Pin it to the CPU-only build instead.
+[tool.uv.sources]
+# PyTorch's CPU-only index has no macOS wheels (macOS PyPI wheels are already
+# CPU-only there), so only redirect Linux resolution to it; macOS keeps using
+# the default index.
+torch = [
+    { index = "pytorch-cpu", marker = "platform_system != 'Darwin'" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [project.optional-dependencies]
 dev = [
